@@ -24,6 +24,15 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
+	products, err := parser.GetTopProducts(&c, "коврик для мышки", "popular", 1, 50)
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
 	output, _ := json.MarshalIndent(product, "", "  ")
-	os.WriteFile("products.json", output, 0644)
+	os.WriteFile("one_product.json", output, 0644)
+
+	outputs, _ := json.MarshalIndent(products, "", "  ")
+	os.WriteFile("products.json", outputs, 0644)
 }
