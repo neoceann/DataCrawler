@@ -55,23 +55,9 @@ func (p *WBParser) GetProductInfo(cfg *config.Config) (*WBProduct, error) {
 		BaseURLProduct, Dest, ProductID)
 
 	req, _ := http.NewRequest("GET", URL, nil)
-
-	req.Header.Set("accept", "*/*")
-	req.Header.Set("accept-language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7")
 	req.Header.Set("deviceid", cfg.DeviceID)
-	req.Header.Set("priority", "u=1, i")
-	req.Header.Set("referer", fmt.Sprintf("https://www.wildberries.ru/catalog/%s/detail.aspx", ProductID))
-	req.Header.Set("sec-ch-ua", `"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"`)
-	req.Header.Set("sec-ch-ua-mobile", "?0")
-	req.Header.Set("sec-ch-ua-platform", `"Windows"`)
-	req.Header.Set("sec-fetch-dest", "empty")
-	req.Header.Set("sec-fetch-mode", "cors")
-	req.Header.Set("sec-fetch-site", "same-origin")
-	req.Header.Set("user-agent", cfg.UserAgent)
-	req.Header.Set("x-requested-with", "XMLHttpRequest")
-	req.Header.Set("x-spa-version", "14.6.4")
-
 	req.Header.Set("Cookie", fmt.Sprintf("x_wbaas_token=%s; _wbauid=%s; _wbauid=%s", cfg.XWbaasToken, cfg.Wbauid1, cfg.Wbauid2))
+	req.Header.Set("user-agent", cfg.UserAgent)
 
 	response, err := p.client.Do(req)
 
