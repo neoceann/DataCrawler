@@ -1,6 +1,7 @@
-package wb
+package parser
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +10,8 @@ import (
 	"time"
 
 	"crawler/internal/config"
+	"crawler/internal/repository/db"
+	"crawler/internal/repository/mapper"
 )
 
 const (
@@ -21,41 +24,25 @@ const (
 	ProductID = "200135094" //test
 )
 
-type WBResponse struct {
-	Products []*WBProduct `json:"products"`
-}
-
-type WBProduct struct {
-	ID             int64   `json:"id"`
-	Brand          string  `json:"brand"`
-	Name           string  `json:"name"`
-	Supplier       string  `json:"supplier"`
-	SupplierRating float64 `json:"supplierRating"`
-	ProductRating  float64 `json:"reviewRating"`
-	FeedbackCount  int64   `json:"feedbacks"`
-	Sizes          []struct {
-		Price struct {
-			BasicPrice  int64 `json:"basic"`
-			ActualPrice int64 `json:"product"`
-		} `json:"price"`
-	} `json:"sizes"`
-	TotalQuantity int64 `json:"totalQuantity"`
-}
-
 type WBParser struct {
 	client  *http.Client
-	baseURL string
+	queries *db.Queries
 }
 
-func NewWBParser() *WBParser {
+func NewWBParser(q *db.Queries) *WBParser {
 	return &WBParser{
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
+		queries: q,
 	}
 }
 
-func (p *WBParser) GetProductInfo(cfg *config.Config) (*WBProduct, error) {
+func (p *WBParser) SaveProductToDB(ctx context.Context, wbp *mapper.WBProduct) error {
+	return p.queries.CreateProduct(ctx, *wbp.ToDbParams())
+}
+
+func (p *WBParser) GetProductInfo(cfg *config.Config) (*mapper.WBProduct, error) {
 	URL := fmt.Sprintf("%s?%s&nm=%s",
 		BaseURLProduct, CommonParams, ProductID)
 
@@ -79,7 +66,7 @@ func (p *WBParser) GetProductInfo(cfg *config.Config) (*WBProduct, error) {
 
 	body, _ := io.ReadAll(response.Body)
 
-	var resp WBResponse
+	var resp mapper.WBResponse
 
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, err
@@ -89,7 +76,7 @@ func (p *WBParser) GetProductInfo(cfg *config.Config) (*WBProduct, error) {
 
 }
 
-func (p *WBParser) GetTopProducts(cfg *config.Config, query, sortBy string, page, limit int) ([]*WBProduct, error) {
+func (p *WBParser) GetTopProducts(cfg *config.Config, query, sortBy string, page, limit int) ([]*mapper.WBProduct, error) {
 	q := url.QueryEscape(query)
 
 	URL := fmt.Sprintf("%s?%s&%s&q1=%s&query=%s&sort=%s&page=%d&limit=%d",
@@ -115,7 +102,7 @@ func (p *WBParser) GetTopProducts(cfg *config.Config, query, sortBy string, page
 
 	body, _ := io.ReadAll(response.Body)
 
-	var resp WBResponse
+	var resp mapper.WBResponse
 
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, err

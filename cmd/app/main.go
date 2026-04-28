@@ -1,24 +1,38 @@
 package main
 
 import (
+	"context"
 	"crawler/internal/config"
-	wb "crawler/internal/parsers"
+	"crawler/internal/parser"
+	"crawler/internal/repository/db"
 	"encoding/json"
 	"log"
 	"os"
 )
 
 func main() {
-	parser := wb.NewWBParser()
+	ctx := context.Background()
 
 	var c config.Config
-	err := c.ReadEnv()
+	var cdb config.DBConfig
+	err := config.ReadEnv(&c, &cdb)
 
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
+	pool, err := db.NewPool(ctx, &cdb)
+
+	if err != nil {
+		log.Fatal("Failed to create pool:", err)
+	}
+	defer pool.Close()
+
+	parser := parser.NewWBParser(db.New(pool.Pool))
+
 	product, err := parser.GetProductInfo(&c)
+
+	err = parser.SaveProductToDB(ctx, product)
 
 	if err != nil {
 		log.Fatal(err.Error())

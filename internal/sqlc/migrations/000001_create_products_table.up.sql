@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS products (
     price_basic BIGINT NOT NULL,
     price_actual BIGINT NOT NULL,
     quantity BIGINT NOT NULL,
-    updated_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     UNIQUE(marketplace, product_id)
 );
