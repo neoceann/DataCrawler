@@ -14,7 +14,7 @@ type Pool struct {
 	*pgxpool.Pool
 }
 
-func NewPool(ctx context.Context, cfg *config.DBConfig) (*Pool, error) {
+func NewPool(ctx context.Context, cfg *config.Config) (*Pool, error) {
 	poolConfig, err := pgxpool.ParseConfig(cfg.GetConnectionURL())
 	if err != nil {
 		return nil, fmt.Errorf("parse config: %w", err)

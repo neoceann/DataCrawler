@@ -2,43 +2,26 @@ package main
 
 import (
 	"context"
+	"crawler/internal/app"
 	"crawler/internal/config"
-	"crawler/internal/parser"
-	"crawler/internal/repository/db"
+	"crawler/internal/shutdown"
 	"encoding/json"
 	"log"
 	"os"
 )
 
 func main() {
-	ctx := context.Background()
+	ctx, cancel := shutdown.GracefulShutdown((context.Background()))
+	defer cancel()
 
-	var c config.Config
-	var cdb config.DBConfig
-	err := config.ReadEnv(&c, &cdb)
-
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	pool, err := db.NewPool(ctx, &cdb)
+	crawler, err := app.New(ctx)
 
 	if err != nil {
-		log.Fatal("Failed to create pool:", err)
+		log.Fatal("Failed to run app:%w", err)
 	}
-	defer pool.Close()
+	defer crawler.Close()
 
-	parser := parser.NewWBParser(db.New(pool.Pool))
-
-	product, err := parser.GetProductInfo(&c)
-
-	err = parser.SaveProductToDB(ctx, product)
-
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	products, err := parser.GetTopProducts(&c, "коврик для мышки", "popular", 1, 50)
+	product, err := crawler.GetProductByID(ctx, config.WB, "200135094")
 
 	if err != nil {
 		log.Fatal(err.Error())
@@ -47,6 +30,6 @@ func main() {
 	output, _ := json.MarshalIndent(product, "", "  ")
 	os.WriteFile("one_product.json", output, 0644)
 
-	outputs, _ := json.MarshalIndent(products, "", "  ")
-	os.WriteFile("products.json", outputs, 0644)
+	// outputs, _ := json.MarshalIndent(products, "", "  ")
+	// os.WriteFile("products.json", outputs, 0644)
 }

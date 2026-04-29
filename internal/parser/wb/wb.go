@@ -1,4 +1,4 @@
-package parser
+package wb
 
 import (
 	"context"
@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"crawler/internal/config"
+	"crawler/internal/parser"
 	"crawler/internal/repository/db"
-	"crawler/internal/repository/mapper"
 )
 
 const (
@@ -21,35 +21,41 @@ const (
 	CommonParams = "appType=1&curr=rub&dest=-2133462&spp=30&hide_vflags=4294967296&ab_testing=false&lang=ru&locale=ru"
 	SearchParams = "inheritFilters=false&resultset=catalog&suppressSpellcheck=false"
 
-	ProductID = "200135094" //test
+	//ProductID = "200135094" //test
 )
 
 type WBParser struct {
 	client  *http.Client
 	queries *db.Queries
+	cfg     *config.Config
 }
 
-func NewWBParser(q *db.Queries) *WBParser {
+func NewWBParser(q *db.Queries, cfg *config.Config) *WBParser {
 	return &WBParser{
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
 		queries: q,
+		cfg:     cfg,
 	}
 }
 
-func (p *WBParser) SaveProductToDB(ctx context.Context, wbp *mapper.WBProduct) error {
-	return p.queries.CreateProduct(ctx, *wbp.ToDbParams())
+func (p *WBParser) Name() string {
+	return config.WB
 }
 
-func (p *WBParser) GetProductInfo(cfg *config.Config) (*mapper.WBProduct, error) {
-	URL := fmt.Sprintf("%s?%s&nm=%s",
-		BaseURLProduct, CommonParams, ProductID)
+func (p *WBParser) SaveProductToDB(ctx context.Context, product *parser.BaseProduct) error {
+	return p.queries.CreateProduct(ctx, *product.ToDbParams())
+}
 
-	req, _ := http.NewRequest("GET", URL, nil)
-	req.Header.Set("deviceid", cfg.DeviceID)
-	req.Header.Set("Cookie", fmt.Sprintf("x_wbaas_token=%s; _wbauid=%s; _wbauid=%s", cfg.XWbaasToken, cfg.Wbauid1, cfg.Wbauid2))
-	req.Header.Set("user-agent", cfg.UserAgent)
+func (p *WBParser) GetProductByID(ctx context.Context, productID string) (*parser.BaseProduct, error) {
+	URL := fmt.Sprintf("%s?%s&nm=%s",
+		BaseURLProduct, CommonParams, productID)
+
+	req, _ := http.NewRequestWithContext(ctx, "GET", URL, nil)
+	req.Header.Set("deviceid", p.cfg.WBDeviceID)
+	req.Header.Set("Cookie", fmt.Sprintf("x_wbaas_token=%s; _wbauid=%s; _wbauid=%s", p.cfg.WBXWbaasToken, p.cfg.WBWbauid1, p.cfg.WBWbauid2))
+	req.Header.Set("user-agent", p.cfg.WBUserAgent)
 
 	response, err := p.client.Do(req)
 
@@ -66,26 +72,26 @@ func (p *WBParser) GetProductInfo(cfg *config.Config) (*mapper.WBProduct, error)
 
 	body, _ := io.ReadAll(response.Body)
 
-	var resp mapper.WBResponse
+	var resp WBResponse
 
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, err
 	}
 
-	return resp.Products[0], nil
+	return resp.Products[0].ToBaseProduct(), nil
 
 }
 
-func (p *WBParser) GetTopProducts(cfg *config.Config, query, sortBy string, page, limit int) ([]*mapper.WBProduct, error) {
+func (p *WBParser) GetTopProducts(ctx context.Context, query, sortBy string, page, limit int) ([]*parser.BaseProduct, error) {
 	q := url.QueryEscape(query)
 
 	URL := fmt.Sprintf("%s?%s&%s&q1=%s&query=%s&sort=%s&page=%d&limit=%d",
 		BaseURLSearch, CommonParams, SearchParams, q, q, sortBy, page, limit)
 
-	req, _ := http.NewRequest("GET", URL, nil)
-	req.Header.Set("deviceid", cfg.DeviceID)
-	req.Header.Set("Cookie", fmt.Sprintf("x_wbaas_token=%s; _wbauid=%s; _wbauid=%s", cfg.XWbaasToken, cfg.Wbauid1, cfg.Wbauid2))
-	req.Header.Set("user-agent", cfg.UserAgent)
+	req, _ := http.NewRequestWithContext(ctx, "GET", URL, nil)
+	req.Header.Set("deviceid", p.cfg.WBDeviceID)
+	req.Header.Set("Cookie", fmt.Sprintf("x_wbaas_token=%s; _wbauid=%s; _wbauid=%s", p.cfg.WBXWbaasToken, p.cfg.WBWbauid1, p.cfg.WBWbauid2))
+	req.Header.Set("user-agent", p.cfg.WBUserAgent)
 
 	response, err := p.client.Do(req)
 
@@ -102,11 +108,11 @@ func (p *WBParser) GetTopProducts(cfg *config.Config, query, sortBy string, page
 
 	body, _ := io.ReadAll(response.Body)
 
-	var resp mapper.WBResponse
+	var resp WBResponse
 
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, err
 	}
 
-	return resp.Products, nil
+	return resp.ToBaseProducts(), nil
 }

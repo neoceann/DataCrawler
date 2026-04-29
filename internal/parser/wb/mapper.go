@@ -1,7 +1,8 @@
-package mapper
+package wb
 
 import (
-	"crawler/internal/repository/db"
+	"crawler/internal/config"
+	"crawler/internal/parser"
 	"fmt"
 )
 
@@ -26,9 +27,9 @@ type WBProduct struct {
 	TotalQuantity int64 `json:"totalQuantity"`
 }
 
-func (p *WBProduct) ToDbParams() *db.CreateProductParams {
-	return &db.CreateProductParams{
-		Marketplace:    "wb",
+func (p *WBProduct) ToBaseProduct() *parser.BaseProduct {
+	return &parser.BaseProduct{
+		Marketplace:    config.WB,
 		ProductID:      fmt.Sprintf("%d", p.ID),
 		Brand:          p.Brand,
 		Name:           p.Name,
@@ -40,4 +41,13 @@ func (p *WBProduct) ToDbParams() *db.CreateProductParams {
 		PriceActual:    p.Sizes[0].Price.ActualPrice,
 		Quantity:       p.TotalQuantity,
 	}
+}
+
+func (r *WBResponse) ToBaseProducts() []*parser.BaseProduct {
+	var products []*parser.BaseProduct
+	for _, product := range r.Products {
+		products = append(products, product.ToBaseProduct())
+	}
+
+	return products
 }
