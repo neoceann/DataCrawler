@@ -2,13 +2,14 @@ package parser
 
 import (
 	"context"
+	"crawler/internal/config"
 	"crawler/internal/repository/db"
 )
 
 type Parser interface {
 	Name() string
 
-	GetTopProducts(ctx context.Context, query, sortBy string, page, limit int) ([]*BaseProduct, error)
+	GetTopProducts(ctx context.Context, s *config.SearchConfig) ([]*BaseProduct, error)
 
 	GetProductByID(ctx context.Context, productID string) (*BaseProduct, error)
 

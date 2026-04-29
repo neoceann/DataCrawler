@@ -7,11 +7,6 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 )
 
-const (
-	WB   = "Wildberries"
-	OZON = "Ozon"
-)
-
 type Config struct {
 	Host     string `env:"DB_HOST"`
 	Port     int    `env:"DB_PORT"`

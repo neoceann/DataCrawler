@@ -20,8 +20,6 @@ const (
 
 	CommonParams = "appType=1&curr=rub&dest=-2133462&spp=30&hide_vflags=4294967296&ab_testing=false&lang=ru&locale=ru"
 	SearchParams = "inheritFilters=false&resultset=catalog&suppressSpellcheck=false"
-
-	//ProductID = "200135094" //test
 )
 
 type WBParser struct {
@@ -82,11 +80,11 @@ func (p *WBParser) GetProductByID(ctx context.Context, productID string) (*parse
 
 }
 
-func (p *WBParser) GetTopProducts(ctx context.Context, query, sortBy string, page, limit int) ([]*parser.BaseProduct, error) {
-	q := url.QueryEscape(query)
+func (p *WBParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) ([]*parser.BaseProduct, error) {
+	q := url.QueryEscape(s.Query)
 
 	URL := fmt.Sprintf("%s?%s&%s&q1=%s&query=%s&sort=%s&page=%d&limit=%d",
-		BaseURLSearch, CommonParams, SearchParams, q, q, sortBy, page, limit)
+		BaseURLSearch, CommonParams, SearchParams, q, q, s.SortBy, s.Page, s.Limit)
 
 	req, _ := http.NewRequestWithContext(ctx, "GET", URL, nil)
 	req.Header.Set("deviceid", p.cfg.WBDeviceID)
