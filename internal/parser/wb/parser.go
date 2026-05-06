@@ -70,7 +70,7 @@ func (p *WBParser) GetProductByID(ctx context.Context, productID string) (*parse
 
 	body, _ := io.ReadAll(response.Body)
 
-	var resp WBResponse
+	var resp WBTopProducts
 
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (p *WBParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) (
 
 	body, _ := io.ReadAll(response.Body)
 
-	var resp WBResponse
+	var resp WBTopProducts
 
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, err

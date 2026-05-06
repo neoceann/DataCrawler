@@ -4,9 +4,9 @@ import (
 	"context"
 	"crawler/internal/app"
 	"crawler/internal/shutdown"
-	"encoding/json"
+	//"encoding/json"
 	"log"
-	"os"
+	//"os"
 )
 
 func main() {
@@ -26,21 +26,23 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	products, err := crawler.GetTopProducts(ctx)
+	log.Print(product)
 
-	if err != nil {
-		log.Fatal(err.Error())
-	}
+	// products, err := crawler.GetTopProducts(ctx)
+
+	// if err != nil {
+	// 	log.Fatal(err.Error())
+	// }
 
 	err = crawler.SaveProductToDB(ctx, product)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	//test
-	output, _ := json.MarshalIndent(product, "", "  ")
-	os.WriteFile("one_product.json", output, 0644)
+	// //test
+	// output, _ := json.MarshalIndent(product, "", "  ")
+	// os.WriteFile("one_product.json", output, 0644)
 
-	outputs, _ := json.MarshalIndent(products, "", "  ")
-	os.WriteFile("products.json", outputs, 0644)
+	// outputs, _ := json.MarshalIndent(products, "", "  ")
+	// os.WriteFile("products.json", outputs, 0644)
 }

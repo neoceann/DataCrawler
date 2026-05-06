@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-type WBResponse struct {
+type WBTopProducts struct {
 	Products []*WBProduct `json:"products"`
 }
 
@@ -37,13 +37,13 @@ func (p *WBProduct) ToBaseProduct() *parser.BaseProduct {
 		SupplierRating: p.SupplierRating,
 		ProductRating:  p.ProductRating,
 		Feedbacks:      p.FeedbackCount,
-		PriceBasic:     p.Sizes[0].Price.BasicPrice,
-		PriceActual:    p.Sizes[0].Price.ActualPrice,
+		PriceBasic:     p.Sizes[0].Price.BasicPrice/100,
+		PriceActual:    p.Sizes[0].Price.ActualPrice/100,
 		Quantity:       p.TotalQuantity,
 	}
 }
 
-func (r *WBResponse) ToBaseProducts() []*parser.BaseProduct {
+func (r *WBTopProducts) ToBaseProducts() []*parser.BaseProduct {
 	var products []*parser.BaseProduct
 	for _, product := range r.Products {
 		products = append(products, product.ToBaseProduct())

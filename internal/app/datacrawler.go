@@ -5,6 +5,7 @@ import (
 	"crawler/internal/config"
 	"crawler/internal/parser"
 	"crawler/internal/parser/wb"
+	"crawler/internal/parser/ozon"
 	"crawler/internal/repository/db"
 	"fmt"
 	"log"
@@ -45,6 +46,7 @@ func New(ctx context.Context) (*DataCrawler, error) {
 
 	parsers := []parser.Parser{
 		wb.NewWBParser(queries, &c),
+		ozon.NewOzonParser(queries, &c),
 	}
 
 	return &DataCrawler{
