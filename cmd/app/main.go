@@ -4,8 +4,6 @@ import (
 	"context"
 	"crawler/internal/app"
 	"crawler/internal/shutdown"
-	"encoding/json"
-	"os"
 	"log"
 )
 
@@ -27,9 +25,15 @@ func main() {
 	}
 
 	if crawler.Config.SaveToDB {
-		crawler.SaveProductsToDB(ctx, p)
+		err := crawler.SaveProductsToDB(ctx, p)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Print("\nProducts saved to DB\n")
 	} else {
-		outputs, _ := json.MarshalIndent(p, "", "  ")
-		os.WriteFile("products.json", outputs, 0644)
+		crawler.SaveProductsToFile(p)
+		log.Print("\nProducts saved to file\n")
+
 	}
 }

@@ -7,8 +7,10 @@ import (
 	"crawler/internal/parser/ozon"
 	"crawler/internal/parser/wb"
 	"crawler/internal/repository/db"
+	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"time"
 )
@@ -133,6 +135,11 @@ func (d *DataCrawler) SaveProductsToDB(ctx context.Context, products []*parser.B
 	}
 
 	return nil
+}
+
+func (d *DataCrawler) SaveProductsToFile(products []*parser.BaseProduct) {
+	p, _ := json.MarshalIndent(products, "", "  ")
+	os.WriteFile("products.json", p, 0644)
 }
 
 func (d *DataCrawler) findParserForMarketplace(name string) (parser.Parser, error) {
