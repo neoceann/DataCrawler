@@ -3,7 +3,6 @@ package ozon
 import (
 	"crawler/internal/config"
 	"crawler/internal/parser"
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -22,22 +21,22 @@ type OzonProduct struct {
 	} `json:"offers"`
 }
 
-func (p *OzonProduct) ToBaseProduct() (*parser.BaseProduct, error) {
+func (p *OzonProduct) ToBaseProduct() (*parser.BaseProduct) {
 	supplier := "unknown"
 	supplierRate := 0.0
 
 	productRating, err := strconv.ParseFloat(p.AggregateRating.RatingValue, 64)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert product rating")
+		productRating = 0
 	}
 	feedbacks, err := strconv.Atoi(p.AggregateRating.ReviewCount)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert feedbacks")
+		feedbacks = 0
 	}
 
 	price, err := strconv.Atoi(p.Offers.Price)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert price")
+		price = 0
 	}
 
 	inStock := strings.Contains(p.Offers.Availability, "InStock")
@@ -56,7 +55,7 @@ func (p *OzonProduct) ToBaseProduct() (*parser.BaseProduct, error) {
 		ProductRating: productRating,
 		Feedbacks: int64(feedbacks),
 		PriceBasic: 0,
-		PriceActual: int64(price),//p.Offers.Price,
+		PriceActual: int64(price),
 		Quantity: int64(quantity),
-	}, nil
+	}
 }

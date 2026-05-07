@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -83,13 +84,15 @@ func (p *WBParser) GetProductByID(ctx context.Context, productID string) (*parse
 func (p *WBParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) ([]*parser.BaseProduct, error) {
 	q := url.QueryEscape(s.Query)
 
-	URL := fmt.Sprintf("%s?%s&%s&q1=%s&query=%s&sort=%s&page=%d&limit=%d",
-		BaseURLSearch, CommonParams, SearchParams, q, q, s.SortBy, s.Page, s.Limit)
+	URL := fmt.Sprintf("%s?%s&%s&q1=%s&query=%s&sort=%s&limit=%d",
+		BaseURLSearch, CommonParams, SearchParams, q, q, s.SortBy, s.Limit)
 
 	req, _ := http.NewRequestWithContext(ctx, "GET", URL, nil)
 	req.Header.Set("deviceid", p.cfg.WBDeviceID)
 	req.Header.Set("Cookie", fmt.Sprintf("x_wbaas_token=%s; _wbauid=%s; _wbauid=%s", p.cfg.WBXWbaasToken, p.cfg.WBWbauid1, p.cfg.WBWbauid2))
 	req.Header.Set("user-agent", p.cfg.WBUserAgent)
+
+	log.Printf("Getting top %d products from %s...", s.Limit, p.Name())
 
 	response, err := p.client.Do(req)
 

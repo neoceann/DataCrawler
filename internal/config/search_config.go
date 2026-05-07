@@ -18,19 +18,19 @@ var availableMarkets = map[string]struct{}{WB: {}, OZON: {}, AVITO: {}, YANDEX: 
 var (
 	marketplaces = flag.String("markets", WB, marketsNameToString(availableMarkets))
 	query        = flag.String("query", "коврик для мышки", "Search query")
-	sort         = flag.String("sort", "popular", "Sort by \"popular\" or \"rating\", etc")
-	limit        = flag.Int("limit", 10, "Top N results")
-	page         = flag.Int("page", 1, "Page number")
-	id           = flag.String("id", "200135094", "Product ID (product info on the individual marketplace)")
+	sort         = flag.String("sort", "", "Sort by \"popular\" or \"rating\", etc")
+	limit        = flag.Int("limit", 5, "Top N results")
+	//page         = flag.Int("page", 1, "Page number")
+	//id           = flag.String("id", "200135094", "Product ID (product info on the individual marketplace)")
 )
 
 type SearchConfig struct {
 	Marketplaces []string
 	Query        string
 	SortBy       string
-	Page         int
+	//Page         int
 	Limit        int
-	ProductID    string //for search one product
+	//ProductID    string
 }
 
 func NewSearchConfig() (*SearchConfig, error) {
@@ -51,9 +51,9 @@ func NewSearchConfig() (*SearchConfig, error) {
 		Marketplaces: marketList,
 		Query:        *query,
 		SortBy:       *sort,
-		Page:         *page,
+		//Page:         *page,
 		Limit:        *limit,
-		ProductID:    *id,
+		//ProductID:    *id,
 	}, nil
 }
 
