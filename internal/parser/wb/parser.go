@@ -12,7 +12,6 @@ import (
 
 	"crawler/internal/config"
 	"crawler/internal/parser"
-	"crawler/internal/repository/db"
 )
 
 const (
@@ -25,26 +24,20 @@ const (
 
 type WBParser struct {
 	client  *http.Client
-	queries *db.Queries
 	cfg     *config.Config
 }
 
-func NewWBParser(q *db.Queries, cfg *config.Config) *WBParser {
+func NewWBParser(cfg *config.Config) *WBParser {
 	return &WBParser{
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
-		queries: q,
 		cfg:     cfg,
 	}
 }
 
 func (p *WBParser) Name() string {
 	return config.WB
-}
-
-func (p *WBParser) SaveProductToDB(ctx context.Context, product *parser.BaseProduct) error {
-	return p.queries.CreateProduct(ctx, *product.ToDbParams())
 }
 
 func (p *WBParser) GetProductByID(ctx context.Context, productID string) (*parser.BaseProduct, error) {
@@ -54,7 +47,7 @@ func (p *WBParser) GetProductByID(ctx context.Context, productID string) (*parse
 	req, _ := http.NewRequestWithContext(ctx, "GET", URL, nil)
 	req.Header.Set("deviceid", p.cfg.WBDeviceID)
 	req.Header.Set("Cookie", fmt.Sprintf("x_wbaas_token=%s; _wbauid=%s; _wbauid=%s", p.cfg.WBXWbaasToken, p.cfg.WBWbauid1, p.cfg.WBWbauid2))
-	req.Header.Set("user-agent", p.cfg.WBUserAgent)
+	req.Header.Set("user-agent", p.cfg.UserAgent)
 
 	response, err := p.client.Do(req)
 
@@ -90,7 +83,7 @@ func (p *WBParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) (
 	req, _ := http.NewRequestWithContext(ctx, "GET", URL, nil)
 	req.Header.Set("deviceid", p.cfg.WBDeviceID)
 	req.Header.Set("Cookie", fmt.Sprintf("x_wbaas_token=%s; _wbauid=%s; _wbauid=%s", p.cfg.WBXWbaasToken, p.cfg.WBWbauid1, p.cfg.WBWbauid2))
-	req.Header.Set("user-agent", p.cfg.WBUserAgent)
+	req.Header.Set("user-agent", p.cfg.UserAgent)
 
 	log.Printf("Getting top %d products from %s...", s.Limit, p.Name())
 
@@ -114,6 +107,8 @@ func (p *WBParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) (
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, err
 	}
+
+    log.Printf("Received products from %s: %d", p.Name(), len(resp.Products))
 
 	return resp.ToBaseProducts(), nil
 }

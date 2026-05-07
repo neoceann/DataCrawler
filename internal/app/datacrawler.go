@@ -46,8 +46,8 @@ func New(ctx context.Context) (*DataCrawler, error) {
 	queries := db.New(pool.Pool)
 
 	parsers := []parser.Parser{
-		wb.NewWBParser(queries, &c),
-		ozon.NewOzonParser(queries, &c),
+		wb.NewWBParser(&c),
+		ozon.NewOzonParser(&c),
 	}
 
 	return &DataCrawler{
@@ -121,17 +121,18 @@ func (d *DataCrawler) GetTopProducts(ctx context.Context) ([]*parser.BaseProduct
     return products, nil
 }
 
-func (d *DataCrawler) SaveProductToDB(ctx context.Context, product *parser.BaseProduct) error {
-	processCtx, processCancel := context.WithTimeout(ctx, 10*time.Second)
+func (d *DataCrawler) SaveProductsToDB(ctx context.Context, products []*parser.BaseProduct) error {
+	ctx, processCancel := context.WithTimeout(ctx, 10*time.Second)
 	defer processCancel()
 
-	p, err := d.findParserForMarketplace(product.Marketplace)
-
-	if err != nil {
-		return err
+	for _, product := range products {
+		err := d.Queries.CreateProduct(ctx, *product.ToDbParams())
+		if err != nil {
+			return err
+		}
 	}
 
-	return p.SaveProductToDB(processCtx, product)
+	return nil
 }
 
 func (d *DataCrawler) findParserForMarketplace(name string) (parser.Parser, error) {

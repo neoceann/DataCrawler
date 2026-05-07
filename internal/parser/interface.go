@@ -12,8 +12,6 @@ type Parser interface {
 	GetTopProducts(ctx context.Context, s *config.SearchConfig) ([]*BaseProduct, error)
 
 	GetProductByID(ctx context.Context, productID string) (*BaseProduct, error)
-
-	SaveProductToDB(ctx context.Context, p *BaseProduct) error
 }
 
 type BaseProduct struct {

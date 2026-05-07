@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/url"
 	"regexp"
+	"sync"
 
 	//"os"
 
@@ -19,19 +20,29 @@ import (
 
 	"crawler/internal/config"
 	"crawler/internal/parser"
-	"crawler/internal/repository/db"
 )
 
 type OzonParser struct {
-	queries *db.Queries
 	cfg     *config.Config
+    allocCtx context.Context
+    cancel   context.CancelFunc
 }
 
-func NewOzonParser(q *db.Queries, cfg *config.Config) *OzonParser {
-	return &OzonParser{
-		queries: q,
-		cfg:     cfg,
-	}
+func NewOzonParser(cfg *config.Config) *OzonParser {
+    opts := append(chromedp.DefaultExecAllocatorOptions[:],
+        chromedp.Flag("disable-blink-features", "AutomationControlled"),
+        chromedp.Flag("disable-automation", true),
+        chromedp.UserAgent(cfg.UserAgent),
+        chromedp.WindowSize(1920, 1080),
+        chromedp.Flag("no-sandbox", true),
+        chromedp.Flag("disable-dev-shm-usage", true),
+    )
+    allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
+    return &OzonParser{
+        allocCtx: allocCtx,
+        cancel:   cancel,
+        cfg:     cfg,
+    }
 }
 
 func (p *OzonParser) Name() string {
@@ -41,18 +52,7 @@ func (p *OzonParser) Name() string {
 func (p *OzonParser) GetProductByID(ctx context.Context, productID string) (*parser.BaseProduct, error) {
     url := fmt.Sprintf("https://www.ozon.ru/product/%s/", productID)
 
-    opts := append(chromedp.DefaultExecAllocatorOptions[:],
-        chromedp.Flag("disable-blink-features", "AutomationControlled"),
-        chromedp.Flag("disable-automation", true),
-        chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"),
-        chromedp.WindowSize(1920, 1080),
-        chromedp.Flag("no-sandbox", true),
-        chromedp.Flag("disable-dev-shm-usage", true),
-    )
-    ctx, cancel := chromedp.NewExecAllocator(ctx, opts...)
-    defer cancel()
-
-    ctx, cancel = chromedp.NewContext(ctx)
+    ctx, cancel := chromedp.NewContext(p.allocCtx)
     defer cancel()
 
     ctx, cancel = context.WithTimeout(ctx, 45*time.Second)
@@ -65,7 +65,7 @@ func (p *OzonParser) GetProductByID(ctx context.Context, productID string) (*par
         
         chromedp.WaitVisible(`h1`, chromedp.ByQuery),
         
-        chromedp.Sleep(3*time.Second),
+        chromedp.Sleep(1*time.Second),
         
         chromedp.OuterHTML("html", &htmlContent),
     )
@@ -94,24 +94,10 @@ func (p *OzonParser) GetProductByID(ctx context.Context, productID string) (*par
     return ozonProduct.ToBaseProduct(), nil
 }
 
-func (p *OzonParser) SaveProductToDB(ctx context.Context, product *parser.BaseProduct) error {
-	return p.queries.CreateProduct(ctx, *product.ToDbParams())
-}
-
 func (p *OzonParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) ([]*parser.BaseProduct, error) {
-        searchURL := fmt.Sprintf("https://www.ozon.ru/search/?text=%s&sorting=%s", url.QueryEscape(s.Query), s.SortBy)
-    opts := append(chromedp.DefaultExecAllocatorOptions[:],
-        chromedp.Flag("disable-blink-features", "AutomationControlled"),
-        chromedp.Flag("disable-automation", true),
-        chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"),
-        chromedp.WindowSize(1920, 1080),
-        chromedp.Flag("no-sandbox", true),
-        chromedp.Flag("disable-dev-shm-usage", true),
-    )
-    ctx, cancel := chromedp.NewExecAllocator(ctx, opts...)
-    defer cancel()
+    searchURL := fmt.Sprintf("https://www.ozon.ru/search/?text=%s&sorting=%s", url.QueryEscape(s.Query), s.SortBy)
 
-    ctx, cancel = chromedp.NewContext(ctx)
+    ctx, cancel := chromedp.NewContext(p.allocCtx)
     defer cancel()
 
     ctx, cancel = context.WithTimeout(ctx, 45*time.Second)
@@ -121,8 +107,9 @@ func (p *OzonParser) GetTopProducts(ctx context.Context, s *config.SearchConfig)
     var links []string
     err := chromedp.Run(ctx,
         chromedp.Navigate(searchURL),
-        chromedp.WaitVisible(`body`, chromedp.ByQuery),
-        chromedp.Sleep(2*time.Second),
+        chromedp.WaitVisible(`a[href*="/product/"]`, chromedp.ByQuery),
+        chromedp.Sleep(1*time.Second),
+
         chromedp.Evaluate(fmt.Sprintf(`
             Array.from(new Set(
                 Array.from(document.querySelectorAll('a[href*="/product/"]'))
@@ -134,24 +121,41 @@ func (p *OzonParser) GetTopProducts(ctx context.Context, s *config.SearchConfig)
         return nil, fmt.Errorf("chromedp error: %w", err)
     }
 
-    productsID := make([]string, len(links))
+    var wg sync.WaitGroup
+    results := make(chan *parser.BaseProduct, len(links))
+    
+    sem := make(chan struct{}, 3)
+    
+    for _, link := range links {
+        wg.Add(1)
+        go func(l string) {
+            defer wg.Done()
+            sem <- struct{}{}
+            defer func() { <-sem }()
+            
+            id, err := p.getIDFromLink(l)
+            if err != nil {
+                log.Printf("failed to get product id from %s with link: %s", p.Name(), link)
+                return
+            }
+            product, err := p.GetProductByID(ctx, id)
+            if err == nil {
+                results <- product
+            }
+        }(link)
+    }
+    
+    go func() {
+        wg.Wait()
+        close(results)
+    }()
 
-    for i := range links {
-        productsID[i], err = p.getIDFromLink(links[i])
-        if err != nil {
-            return nil, err
-        }
+    var products []*parser.BaseProduct
+    for p := range results {
+        products = append(products, p)
     }
 
-    products := make([]*parser.BaseProduct, len(productsID))
-
-    for i := range products {
-        products[i], err = p.GetProductByID(ctx, productsID[i])
-
-        if err != nil {
-            return nil, fmt.Errorf("failed to get top products from %s:%s", p.Name(), err.Error())
-        }
-    }
+    log.Printf("Received products from %s: %d", p.Name(), len(products))
 
 	return products, nil
 }
