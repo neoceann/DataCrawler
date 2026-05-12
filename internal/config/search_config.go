@@ -54,7 +54,7 @@ var availableMarkets = map[string]struct{}{WB: {}, OZON: {}, AVITO: {}, YANDEX: 
 
 var (
 	marketplaces = flag.String("markets", WB, marketsNameToString(availableMarkets))
-	query        = flag.String("query", "коврик для мышки", "Search query")
+	query        = flag.String("query", "коврик для мышки gembird", "Search query")
 	sort         = flag.String("sort", SortPopular, "Sort by: " + SortRating + " || " + SortPopular + " || " + SortPriceAsc + " || " + SortPriceDesc) 
 	limit        = flag.Int("limit", 5, "Top N results")
 	//page         = flag.Int("page", 1, "Page number")

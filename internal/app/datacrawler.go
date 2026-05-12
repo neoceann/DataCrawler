@@ -4,6 +4,7 @@ import (
 	"context"
 	"crawler/internal/config"
 	"crawler/internal/parser"
+	"crawler/internal/parser/avito"
 	"crawler/internal/parser/ozon"
 	"crawler/internal/parser/wb"
 	"crawler/internal/repository/db"
@@ -50,6 +51,7 @@ func New(ctx context.Context) (*DataCrawler, error) {
 	parsers := []parser.Parser{
 		wb.NewWBParser(&c),
 		ozon.NewOzonParser(&c),
+		avito.NewAvitoParser(&c),
 	}
 
 	return &DataCrawler{
