@@ -50,7 +50,7 @@ func (p *AvitoParser) GetTopProducts(ctx context.Context, s *config.SearchConfig
         return nil, err
     }
 
-    log.Printf("Getting top %d products from %s (found %d links)...", s.Limit, p.Name(), len(links))
+    log.Printf("Getting top %d products from %s...", s.Limit, p.Name())
 
     sem := make(chan struct{}, 2)
     
@@ -138,8 +138,6 @@ func (p *AvitoParser) parseProductPage(ctx context.Context, pageURL string) (*pa
 	product.Price = strings.Fields(doc.Find(`[data-marker="item-view/item-price"]`).First().Text())[0]
 	product.Supplier = doc.Find(`[data-marker="seller-info/name"]`).First().Text()
 	product.SupplierRating, _ = doc.Find(`[data-marker="sellerRate"] meta[itemprop="ratingValue"]`).Attr("content")
-
-	log.Print(product.SupplierRating)
 
     return product.ToBaseProduct(), nil
 }
