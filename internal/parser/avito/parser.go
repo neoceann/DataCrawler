@@ -99,7 +99,7 @@ func (p *AvitoParser) parseProductPage(ctx context.Context, pageURL string) (*pa
 	ctx, cancel := chromedp.NewContext(p.allocCtx)
     defer cancel()
 
-    ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
+    ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
     defer cancel()
 
     var htmlContent string
@@ -146,7 +146,7 @@ func (p *AvitoParser) getProductLinks(ctx context.Context, query string, limit i
     ctx, cancel := chromedp.NewContext(p.allocCtx)
     defer cancel()
 
-    ctx, cancel = context.WithTimeout(ctx, 45*time.Second)
+    ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
     defer cancel()
 
     searchURL := fmt.Sprintf("https://www.avito.ru/kazan?q=%s казань", query)
