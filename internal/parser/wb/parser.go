@@ -78,7 +78,7 @@ func (p *WBParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) (
 	q := url.QueryEscape(s.Query)
 
 	URL := fmt.Sprintf("%s?%s&%s&q1=%s&query=%s&sort=%s&limit=%d",
-		BaseURLSearch, CommonParams, SearchParams, q, q, s.SortBy, s.Limit)
+		BaseURLSearch, CommonParams, SearchParams, q, q, s.GetSortParamForMarket(p.Name(), s.SortBy), s.Limit)
 
 	req, _ := http.NewRequestWithContext(ctx, "GET", URL, nil)
 	req.Header.Set("deviceid", p.cfg.WBDeviceID)

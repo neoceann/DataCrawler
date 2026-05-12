@@ -95,7 +95,7 @@ func (p *OzonParser) GetProductByID(ctx context.Context, productID string) (*par
 }
 
 func (p *OzonParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) ([]*parser.BaseProduct, error) {
-    searchURL := fmt.Sprintf("https://www.ozon.ru/search/?text=%s&sorting=%s", url.QueryEscape(s.Query), s.SortBy)
+    searchURL := fmt.Sprintf("https://www.ozon.ru/search/?text=%s&sorting=%s", url.QueryEscape(s.Query), s.GetSortParamForMarket(p.Name(), s.SortBy))
 
     ctx, cancel := chromedp.NewContext(p.allocCtx)
     defer cancel()

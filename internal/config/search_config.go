@@ -13,12 +13,49 @@ const (
 	YANDEX = "yandex"
 )
 
+const (
+	SortRating = "rating"
+	SortPopular = "popular"
+	SortPriceAsc= "priceAsc"
+	SortPriceDesc = "priceDesc"
+)
+
+var MarketSortingParam = map[string]map[string]string {
+	WB: {
+		SortRating: "rate",
+		SortPopular: "popular",
+		SortPriceAsc: "priceup",
+		SortPriceDesc: "pricedown",		
+	},
+
+	OZON: {
+		SortRating: "rating",
+		SortPopular: "score",
+		SortPriceAsc: "price",
+		SortPriceDesc: "price_desc",		
+	},
+
+	AVITO: {
+		SortRating: "rate",
+		SortPopular: "rate",
+		SortPriceAsc: "rate",
+		SortPriceDesc: "rate",		
+	},
+
+	YANDEX: {
+		SortRating: "rate",
+		SortPopular: "rate",
+		SortPriceAsc: "rate",
+		SortPriceDesc: "rate",		
+	},
+}
+
 var availableMarkets = map[string]struct{}{WB: {}, OZON: {}, AVITO: {}, YANDEX: {}}
 
 var (
 	marketplaces = flag.String("markets", WB, marketsNameToString(availableMarkets))
 	query        = flag.String("query", "коврик для мышки", "Search query")
-	sort         = flag.String("sort", "", "Sort by \"price\" or \"rating\", etc")
+	sort         = flag.String("sort", SortPopular, "Sort by: " + SortRating + " || " + SortPopular + " || " + SortPriceAsc + " || " + SortPriceDesc) 
 	limit        = flag.Int("limit", 5, "Top N results")
 	//page         = flag.Int("page", 1, "Page number")
 	//id           = flag.String("id", "200135094", "Product ID (product info on the individual marketplace)")
@@ -31,6 +68,10 @@ type SearchConfig struct {
 	//Page         int
 	Limit        int
 	//ProductID    string
+}
+
+func (s *SearchConfig) GetSortParamForMarket(market string, sortBy string) string {
+	return MarketSortingParam[market][sortBy]
 }
 
 func NewSearchConfig() (*SearchConfig, error) {
