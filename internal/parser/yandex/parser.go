@@ -67,15 +67,29 @@ func (p *YandexParser) GetTopProducts(ctx context.Context, s *config.SearchConfi
 		go func(l string) {
 			defer wg.Done()
 
-			sem <- struct{}{}
-			defer func() { <-sem }()
+           select {
+            case sem <- struct{}{}:
+                defer func() { <-sem }()
+            case <-ctx.Done():
+                return
+            }
+
+			select {
+            case <-ctx.Done():
+                return
+            default:
+            }
 
 			product, err := p.parseProductPage(ctx, l)
 			if err != nil {
 				log.Printf("Warning: failed to parse %s: %v", l, err)
 				return
 			}
-			results <- product
+			select {
+            case results <- product:
+            case <-ctx.Done():
+                return
+            }
 		}(link)
 	}
 

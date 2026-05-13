@@ -130,15 +130,34 @@ func (p *OzonParser) GetTopProducts(ctx context.Context, s *config.SearchConfig)
 		wg.Add(1)
 		go func(l string) {
 			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
+
+           select {
+            case sem <- struct{}{}:
+                defer func() { <-sem }()
+            case <-ctx.Done():
+                return
+            }
+
+			select {
+            case <-ctx.Done():
+                return
+            default:
+            }
 
 			id := extractIDFromURL(l)
 
 			product, err := p.GetProductByID(ctx, id)
-			if err == nil {
-				results <- product
+			if err != nil {
+				log.Printf("Warning: failed to parse %s: %v", l, err)
+				return
 			}
+			
+			select {
+            case results <- product:
+            case <-ctx.Done():
+                return
+            }
+
 		}(link)
 	}
 
