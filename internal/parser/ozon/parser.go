@@ -1,4 +1,3 @@
-// internal/ozon/parser.go
 package ozon
 
 import (
@@ -8,11 +7,8 @@ import (
 	"log"
 	"net/url"
 	"regexp"
-	"sync"
-
-	//"os"
-
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"

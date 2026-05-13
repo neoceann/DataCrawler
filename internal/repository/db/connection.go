@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"crawler/internal/config"
@@ -35,13 +34,11 @@ func NewPool(ctx context.Context, cfg *config.Config) (*Pool, error) {
 		return nil, fmt.Errorf("ping failed: %w", err)
 	}
 
-	log.Println("Database pool created successfully")
 	return &Pool{pool}, nil
 }
 
 func (p *Pool) Close() {
 	if p.Pool != nil {
 		p.Pool.Close()
-		log.Println("Database pool closed")
 	}
 }

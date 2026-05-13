@@ -9,10 +9,8 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	//"os"
 	"regexp"
 
-	//"os"
 	"sync"
 
 	"strings"
@@ -72,7 +70,6 @@ func (p *YandexParser) GetTopProducts(ctx context.Context, s *config.SearchConfi
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			log.Printf("Get info for link: %s", l)
 			product, err := p.parseProductPage(ctx, l)
 			if err != nil {
 				log.Printf("Warning: failed to parse %s: %v", l, err)
@@ -162,18 +159,11 @@ func (p *YandexParser) getProductLinks(ctx context.Context, s *config.SearchConf
 		chromedp.WaitVisible(`[data-auto="snippet-link"]`, chromedp.ByQuery),
 		chromedp.Sleep(2*time.Second),
 		chromedp.Evaluate(fmt.Sprintf(`
-            (function() {
-                const items = document.querySelectorAll('[data-auto="snippet-link"]');
-                const links = [];
-                for (const item of items) {
-                    if (item.href && !links.includes(item.href)) {
-                        links.push(item.href.split('?')[0]);
-                    }
-                    if (links.length >= %d) break;
-                }
-                return links;
-            })()
-        `, s.Limit), &links),
+			Array.from(new Set(
+				Array.from(document.querySelectorAll('[data-auto="snippet-link"]'))
+					.map(a => a.href.split('?')[0])
+			)).slice(0, %d)
+		`, s.Limit), &links),
 	)
 
 	if len(links) == 0 {
