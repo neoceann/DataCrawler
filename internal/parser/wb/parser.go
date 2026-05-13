@@ -23,8 +23,8 @@ const (
 )
 
 type WBParser struct {
-	client  *http.Client
-	cfg     *config.Config
+	client *http.Client
+	cfg    *config.Config
 }
 
 func NewWBParser(cfg *config.Config) *WBParser {
@@ -32,12 +32,16 @@ func NewWBParser(cfg *config.Config) *WBParser {
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
-		cfg:     cfg,
+		cfg: cfg,
 	}
 }
 
 func (p *WBParser) Name() string {
 	return config.WB
+}
+
+func (p *WBParser) Close() error {
+	return nil
 }
 
 func (p *WBParser) GetProductByID(ctx context.Context, productID string) (*parser.BaseProduct, error) {
@@ -108,7 +112,7 @@ func (p *WBParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) (
 		return nil, err
 	}
 
-    log.Printf("Received products from %s: %d", p.Name(), len(resp.Products))
+	log.Printf("Received products from %s: %d", p.Name(), len(resp.Products))
 
 	return resp.ToBaseProducts(), nil
 }

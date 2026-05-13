@@ -48,11 +48,21 @@ func New(ctx context.Context) (*DataCrawler, error) {
 
 	queries := db.New(pool.Pool)
 
-	parsers := []parser.Parser{
-		wb.NewWBParser(&c),
-		ozon.NewOzonParser(&c),
-		avito.NewAvitoParser(&c),
+	var parsers []parser.Parser
+
+	wb := wb.NewWBParser(&c)
+
+	ozon, err := ozon.NewOzonParser(&c)
+	if err != nil {
+		return nil, err
 	}
+
+	avito, err := avito.NewAvitoParser(&c)
+	if err != nil {
+		return nil, err
+	}
+
+	parsers = append(parsers, wb, ozon, avito)
 
 	return &DataCrawler{
 		Parsers:      parsers,
@@ -64,6 +74,12 @@ func New(ctx context.Context) (*DataCrawler, error) {
 }
 
 func (d *DataCrawler) Close() {
+	for _, p := range d.Parsers {
+		if err := p.Close(); err != nil {
+			log.Printf("Error closing parser %s: %v", p.Name(), err)
+		}
+	}
+
 	d.Pool.Close()
 }
 
@@ -81,48 +97,48 @@ func (d *DataCrawler) GetProductByID(ctx context.Context, marketplace, productID
 }
 
 func (d *DataCrawler) GetTopProducts(ctx context.Context) ([]*parser.BaseProduct, error) {
-    var mu sync.Mutex
-    var products []*parser.BaseProduct
-    var wg sync.WaitGroup
-    errChan := make(chan error, len(d.SearchConfig.Marketplaces))
+	var mu sync.Mutex
+	var products []*parser.BaseProduct
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(d.SearchConfig.Marketplaces))
 
-    for _, market := range d.SearchConfig.Marketplaces {
-        wg.Add(1)
-        
-        go func(m string) {
-            defer wg.Done()
-            
-            processCtx, processCancel := context.WithTimeout(ctx, 60*time.Second)
-            defer processCancel()
-            
-            p, err := d.findParserForMarketplace(m)
-            if err != nil {
-                errChan <- fmt.Errorf("%s: %w", m, err)
-                return
-            }
-            
-            product, err := p.GetTopProducts(processCtx, d.SearchConfig)
-            if err != nil {
-                errChan <- fmt.Errorf("%s: %w", m, err)
-                return
-            }
-            
-            mu.Lock()
-            products = append(products, product...)
-            mu.Unlock()
-        }(market)
-    }
-    
-    wg.Wait()
-    close(errChan)
-    
-    for err := range errChan {
-        if err != nil {
-            return nil, err
-        }
-    }
-    
-    return products, nil
+	for _, market := range d.SearchConfig.Marketplaces {
+		wg.Add(1)
+
+		go func(m string) {
+			defer wg.Done()
+
+			processCtx, processCancel := context.WithTimeout(ctx, 60*time.Second)
+			defer processCancel()
+
+			p, err := d.findParserForMarketplace(m)
+			if err != nil {
+				errChan <- fmt.Errorf("%s: %w", m, err)
+				return
+			}
+
+			product, err := p.GetTopProducts(processCtx, d.SearchConfig)
+			if err != nil {
+				errChan <- fmt.Errorf("%s: %w", m, err)
+				return
+			}
+
+			mu.Lock()
+			products = append(products, product...)
+			mu.Unlock()
+		}(market)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	for err := range errChan {
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return products, nil
 }
 
 func (d *DataCrawler) SaveProductsToDB(ctx context.Context, products []*parser.BaseProduct) error {

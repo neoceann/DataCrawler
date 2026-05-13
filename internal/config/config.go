@@ -16,14 +16,14 @@ type Config struct {
 	SSLMode  string `env:"DB_SSLMODE"`
 	MaxConns int32  `env:"DB_POOL_MAX_CONNS"`
 	MinConns int32  `env:"DB_POOL_MIN_CONNS"`
-	SaveToDB bool 	`env:"DB_SAVE_REQ"`
+	SaveToDB bool   `env:"DB_SAVE_REQ"`
 
 	WBDeviceID    string `env:"WB_DEVICE_ID"`
 	WBXWbaasToken string `env:"WB_WBAAS_TOKEN"`
 	WBWbauid1     string `env:"WB_WBAUID_1"`
 	WBWbauid2     string `env:"WB_WBAUID_2"`
 
-	UserAgent   string `env:"USER_AGENT"`
+	UserAgent string `env:"USER_AGENT"`
 }
 
 func ReadEnv(c *Config) error {

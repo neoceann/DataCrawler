@@ -37,8 +37,8 @@ func (p *WBProduct) ToBaseProduct() *parser.BaseProduct {
 		SupplierRating: p.SupplierRating,
 		ProductRating:  p.ProductRating,
 		Feedbacks:      p.FeedbackCount,
-		PriceBasic:     p.Sizes[0].Price.BasicPrice/100,
-		PriceActual:    p.Sizes[0].Price.ActualPrice/100,
+		PriceBasic:     p.Sizes[0].Price.BasicPrice / 100,
+		PriceActual:    p.Sizes[0].Price.ActualPrice / 100,
 		Quantity:       p.TotalQuantity,
 	}
 }

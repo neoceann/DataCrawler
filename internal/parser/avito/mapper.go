@@ -7,10 +7,10 @@ import (
 )
 
 type AvitoProduct struct {
-	ID string
-	Name string
-	Price string
-	Supplier string
+	ID             string
+	Name           string
+	Price          string
+	Supplier       string
 	SupplierRating string
 }
 
@@ -28,11 +28,11 @@ func (p *AvitoProduct) ToBaseProduct() *parser.BaseProduct {
 	}
 
 	return &parser.BaseProduct{
-		Marketplace: config.AVITO,
-		ProductID: p.ID,
-		Name: p.Name,
-		PriceActual: int64(price),
-		Supplier: p.Supplier,
+		Marketplace:    config.AVITO,
+		ProductID:      p.ID,
+		Name:           p.Name,
+		PriceActual:    int64(price),
+		Supplier:       p.Supplier,
 		SupplierRating: supplierRate,
 	}
 }

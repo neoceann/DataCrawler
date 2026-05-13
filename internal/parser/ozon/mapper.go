@@ -8,20 +8,20 @@ import (
 )
 
 type OzonProduct struct {
-    ID          string  `json:"sku"`
-    Name        string  `json:"name"`
-    Brand       string  `json:"brand"`
+	ID              string `json:"sku"`
+	Name            string `json:"name"`
+	Brand           string `json:"brand"`
 	AggregateRating struct {
 		RatingValue string `json:"ratingValue"`
 		ReviewCount string `json:"reviewCount"`
 	} `json:"aggregateRating"`
 	Offers struct {
-    	Price       string   `json:"price"`
+		Price        string `json:"price"`
 		Availability string `json:"availability"`
 	} `json:"offers"`
 }
 
-func (p *OzonProduct) ToBaseProduct() (*parser.BaseProduct) {
+func (p *OzonProduct) ToBaseProduct() *parser.BaseProduct {
 	supplier := "unknown"
 	supplierRate := 0.0
 
@@ -46,16 +46,16 @@ func (p *OzonProduct) ToBaseProduct() (*parser.BaseProduct) {
 	}
 
 	return &parser.BaseProduct{
-		Marketplace: config.OZON,
-		ProductID: p.ID,
-		Brand: p.Brand,
-		Name: p.Name,
-		Supplier: supplier,
+		Marketplace:    config.OZON,
+		ProductID:      p.ID,
+		Brand:          p.Brand,
+		Name:           p.Name,
+		Supplier:       supplier,
 		SupplierRating: supplierRate,
-		ProductRating: productRating,
-		Feedbacks: int64(feedbacks),
-		PriceBasic: 0,
-		PriceActual: int64(price),
-		Quantity: int64(quantity),
+		ProductRating:  productRating,
+		Feedbacks:      int64(feedbacks),
+		PriceBasic:     0,
+		PriceActual:    int64(price),
+		Quantity:       int64(quantity),
 	}
 }
