@@ -13,7 +13,7 @@ type Parser interface {
 
 	GetProductByID(ctx context.Context, productID string) (*BaseProduct, error)
 
-	Close() error
+	Close()
 }
 
 type BaseProduct struct {

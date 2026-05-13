@@ -40,8 +40,7 @@ func (p *WBParser) Name() string {
 	return config.WB
 }
 
-func (p *WBParser) Close() error {
-	return nil
+func (p *WBParser) Close() {
 }
 
 func (p *WBParser) GetProductByID(ctx context.Context, productID string) (*parser.BaseProduct, error) {

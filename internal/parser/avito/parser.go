@@ -44,8 +44,8 @@ func (p *AvitoParser) Name() string {
 	return config.AVITO
 }
 
-func (p *AvitoParser) Close() error {
-	return p.browser.Close()
+func (p *AvitoParser) Close() {
+	p.browser.Close()
 }
 
 func (p *AvitoParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) ([]*parser.BaseProduct, error) {

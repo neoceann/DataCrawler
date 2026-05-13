@@ -81,9 +81,7 @@ func New(ctx context.Context) (*DataCrawler, error) {
 
 func (d *DataCrawler) Close() {
 	for _, p := range d.Parsers {
-		if err := p.Close(); err != nil {
-			log.Printf("Error closing parser %s: %v", p.Name(), err)
-		}
+		p.Close()
 	}
 
 	d.Pool.Close()

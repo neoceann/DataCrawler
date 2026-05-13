@@ -44,8 +44,8 @@ func (p *OzonParser) Name() string {
 	return config.OZON
 }
 
-func (p *OzonParser) Close() error {
-	return p.browser.Close()
+func (p *OzonParser) Close() {
+	p.browser.Close()
 
 }
 

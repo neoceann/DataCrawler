@@ -45,8 +45,8 @@ func (p *YandexParser) Name() string {
 	return config.YANDEX
 }
 
-func (p *YandexParser) Close() error {
-	return p.browser.Close()
+func (p *YandexParser) Close() {
+	p.browser.Close()
 }
 
 func (p *YandexParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) ([]*parser.BaseProduct, error) {
