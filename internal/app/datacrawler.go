@@ -112,7 +112,7 @@ func (d *DataCrawler) GetTopProducts(ctx context.Context) ([]*parser.BaseProduct
 		go func(m string) {
 			defer wg.Done()
 
-			processCtx, processCancel := context.WithTimeout(ctx, 60*time.Second)
+			processCtx, processCancel := context.WithTimeout(ctx, 120*time.Second)
 			defer processCancel()
 
 			p, err := d.findParserForMarketplace(m)
