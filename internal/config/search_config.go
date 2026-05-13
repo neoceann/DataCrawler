@@ -36,17 +36,17 @@ var MarketSortingParam = map[string]map[string]string{
 	},
 
 	AVITO: {
-		SortRating:    "rate",
-		SortPopular:   "rate",
-		SortPriceAsc:  "rate",
-		SortPriceDesc: "rate",
+		SortRating:    "",
+		SortPopular:   "",
+		SortPriceAsc:  "",
+		SortPriceDesc: "",
 	},
 
 	YANDEX: {
-		SortRating:    "rate",
-		SortPopular:   "rate",
-		SortPriceAsc:  "rate",
-		SortPriceDesc: "rate",
+		SortRating:    "rating",
+		SortPopular:   "",
+		SortPriceAsc:  "aprice",
+		SortPriceDesc: "dprice",
 	},
 }
 

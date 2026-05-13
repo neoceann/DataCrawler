@@ -36,17 +36,3 @@ func (p *AvitoProduct) ToBaseProduct() *parser.BaseProduct {
 		SupplierRating: supplierRate,
 	}
 }
-
-// type BaseProduct struct {
-// 	Marketplace    string  `json:"marketplace"`
-// 	ProductID      string  `json:"product_id"`
-// 	Brand          string  `json:"brand"`
-// 	Name           string  `json:"name"`
-// 	Supplier       string  `json:"supplier"`
-// 	SupplierRating float64 `json:"supplier_rating"`
-// 	ProductRating  float64 `json:"product_rating"`
-// 	Feedbacks      int64   `json:"feedbacks"`
-// 	PriceBasic     int64   `json:"price_basic"`
-// 	PriceActual    int64   `json:"price_actual"`
-// 	Quantity       int64   `json:"quantity"`
-// }

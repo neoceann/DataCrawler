@@ -7,6 +7,7 @@ import (
 	"crawler/internal/parser/avito"
 	"crawler/internal/parser/ozon"
 	"crawler/internal/parser/wb"
+	"crawler/internal/parser/yandex"
 	"crawler/internal/repository/db"
 	"encoding/json"
 	"fmt"
@@ -62,7 +63,12 @@ func New(ctx context.Context) (*DataCrawler, error) {
 		return nil, err
 	}
 
-	parsers = append(parsers, wb, ozon, avito)
+	yandex, err := yandex.NewYandexParser(&c)
+	if err != nil {
+		return nil, err
+	}
+
+	parsers = append(parsers, wb, ozon, avito, yandex)
 
 	return &DataCrawler{
 		Parsers:      parsers,

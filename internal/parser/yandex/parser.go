@@ -1,15 +1,18 @@
-package avito
+package yandex
 
 import (
 	"context"
 	"crawler/internal/browser"
 	"crawler/internal/config"
 	"crawler/internal/parser"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/url"
-
+	//"os"
 	"regexp"
+
+	//"os"
 	"sync"
 
 	"strings"
@@ -19,12 +22,12 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-type AvitoParser struct {
+type YandexParser struct {
 	cfg     *config.Config
 	browser *browser.Browser
 }
 
-func NewAvitoParser(cfg *config.Config) (*AvitoParser, error) {
+func NewYandexParser(cfg *config.Config) (*YandexParser, error) {
 	browserCfg := browser.DefaultConfig()
 	browserCfg.UserAgent = cfg.UserAgent
 
@@ -34,22 +37,22 @@ func NewAvitoParser(cfg *config.Config) (*AvitoParser, error) {
 		return nil, err
 	}
 
-	return &AvitoParser{
+	return &YandexParser{
 		browser: browser,
 		cfg:     cfg,
 	}, nil
 }
 
-func (p *AvitoParser) Name() string {
-	return config.AVITO
+func (p *YandexParser) Name() string {
+	return config.YANDEX
 }
 
-func (p *AvitoParser) Close() error {
+func (p *YandexParser) Close() error {
 	return p.browser.Close()
 }
 
-func (p *AvitoParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) ([]*parser.BaseProduct, error) {
-	links, err := p.getProductLinks(ctx, s.Query, s.Limit)
+func (p *YandexParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) ([]*parser.BaseProduct, error) {
+	links, err := p.getProductLinks(ctx, s)
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +72,7 @@ func (p *AvitoParser) GetTopProducts(ctx context.Context, s *config.SearchConfig
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
+			log.Printf("Get info for link: %s", l)
 			product, err := p.parseProductPage(ctx, l)
 			if err != nil {
 				log.Printf("Warning: failed to parse %s: %v", l, err)
@@ -95,31 +99,27 @@ func (p *AvitoParser) GetTopProducts(ctx context.Context, s *config.SearchConfig
 	return products, nil
 }
 
-func (p *AvitoParser) GetProductByID(ctx context.Context, productID string) (*parser.BaseProduct, error) {
-	return nil, nil
-}
-
-func (p *AvitoParser) parseProductPage(ctx context.Context, pageURL string) (*parser.BaseProduct, error) {
+func (p *YandexParser) parseProductPage(ctx context.Context, pageURL string) (*parser.BaseProduct, error) {
 	ctx, cancel := p.browser.NewTab(ctx)
 	defer cancel()
 
-	ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
+	ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	var htmlContent string
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(pageURL),
-		chromedp.WaitVisible(`h1`, chromedp.ByQuery),
-		chromedp.Sleep(3*time.Second),
+		chromedp.WaitVisible(`[itemprop="name"]`, chromedp.ByQuery),
+		chromedp.Sleep(2*time.Second),
 		chromedp.OuterHTML("html", &htmlContent),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("chromedp page error: %w", err)
+		return nil, fmt.Errorf("chromedp error: %w", err)
 	}
 
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlContent))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("goquery parse error: %w", err)
 	}
 
 	// fullHTML, _ := doc.Html()
@@ -129,61 +129,62 @@ func (p *AvitoParser) parseProductPage(ctx context.Context, pageURL string) (*pa
 	// }
 	// log.Print("HTML сохранён в _page.html")
 
-	product := &AvitoProduct{}
+	var jsonLD string
+	doc.Find("script[type='application/ld+json']").Each(func(i int, s *goquery.Selection) {
+		jsonLD = s.Text()
+	})
 
-	product.ID = extractIDFromURL(pageURL)
-
-	product.Name = strings.TrimSpace(doc.Find(`h1[data-marker="item-view/title"]`).Text())
-	if product.Name == "" {
-		product.Name = strings.TrimSpace(doc.Find(`h1`).First().Text())
+	if jsonLD == "" {
+		return nil, fmt.Errorf("empty data for this product")
 	}
 
-	product.Price = strings.Fields(doc.Find(`[data-marker="item-view/item-price"]`).First().Text())[0]
-	product.Supplier = doc.Find(`[data-marker="seller-info/name"]`).First().Text()
-	product.SupplierRating, _ = doc.Find(`[data-marker="sellerRate"] meta[itemprop="ratingValue"]`).Attr("content")
+	var ozonProduct YandexProduct
 
-	return product.ToBaseProduct(), nil
+	json.Unmarshal([]byte(jsonLD), &ozonProduct)
+
+	ozonProduct.ID = extractIDFromURL(pageURL)
+
+	return ozonProduct.ToBaseProduct(), nil
 }
 
-func (p *AvitoParser) getProductLinks(ctx context.Context, query string, limit int) ([]string, error) {
+func (p *YandexParser) getProductLinks(ctx context.Context, s *config.SearchConfig) ([]string, error) {
 	ctx, cancel := p.browser.NewTab(ctx)
 	defer cancel()
 
-	ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
-	searchURL := fmt.Sprintf("https://www.avito.ru/kazan?q=%s казань", url.QueryEscape(query))
+	searchURL := fmt.Sprintf("https://market.yandex.ru/search?text=%s&how=%s", url.QueryEscape(s.Query), s.GetSortParamForMarket(p.Name(), s.SortBy))
 
 	var links []string
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(searchURL),
-		chromedp.WaitVisible(`[data-marker="item"]`, chromedp.ByQuery),
-		chromedp.Sleep(3*time.Second),
+		chromedp.WaitVisible(`[data-auto="snippet-link"]`, chromedp.ByQuery),
+		chromedp.Sleep(2*time.Second),
 		chromedp.Evaluate(fmt.Sprintf(`
             (function() {
-                const items = document.querySelectorAll('[data-marker="item"]');
+                const items = document.querySelectorAll('[data-auto="snippet-link"]');
                 const links = [];
                 for (const item of items) {
-                    const linkElem = item.querySelector('a[data-marker="item-title"]');
-                    if (linkElem && linkElem.href) {
-                        links.push(linkElem.href.split('?')[0]);
+                    if (item.href && !links.includes(item.href)) {
+                        links.push(item.href.split('?')[0]);
                     }
                     if (links.length >= %d) break;
                 }
                 return links;
             })()
-        `, limit), &links),
+        `, s.Limit), &links),
 	)
 
-	if err != nil {
-		return nil, fmt.Errorf("chromedp search error: %w", err)
-	}
-
 	if len(links) == 0 {
-		return nil, fmt.Errorf("no product links found for query: %s", query)
+		return nil, fmt.Errorf("empty links")
 	}
 
-	return links, nil
+	return links, err
+}
+
+func (p *YandexParser) GetProductByID(ctx context.Context, productID string) (*parser.BaseProduct, error) {
+	return nil, nil
 }
 
 func extractIDFromURL(url string) string {

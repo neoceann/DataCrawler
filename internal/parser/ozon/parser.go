@@ -137,11 +137,8 @@ func (p *OzonParser) GetTopProducts(ctx context.Context, s *config.SearchConfig)
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			id, err := p.getIDFromLink(l)
-			if err != nil {
-				log.Printf("failed to get product id from %s with link: %s", p.Name(), link)
-				return
-			}
+			id := extractIDFromURL(l)
+
 			product, err := p.GetProductByID(ctx, id)
 			if err == nil {
 				results <- product
@@ -164,19 +161,7 @@ func (p *OzonParser) GetTopProducts(ctx context.Context, s *config.SearchConfig)
 	return products, nil
 }
 
-func (p *OzonParser) getIDFromLink(link string) (string, error) {
-	id := ""
-	re := regexp.MustCompile(`\b(\d{8,})\b`)
-
-	matches := re.FindStringSubmatch(link)
-
-	if len(matches) > 1 {
-		id = matches[1]
-	}
-
-	if id == "" {
-		return id, fmt.Errorf("failed to get product id (%s)", p.Name())
-	}
-
-	return id, nil
+func extractIDFromURL(url string) string {
+	re := regexp.MustCompile(`(\d{8,})`)
+	return re.FindString(url)
 }
