@@ -4,6 +4,7 @@ import (
 	"crawler/internal/config"
 	"crawler/internal/parser"
 	"strconv"
+	"strings"
 )
 
 type AvitoProduct struct {
@@ -21,17 +22,24 @@ func (p *AvitoProduct) ToBaseProduct() *parser.BaseProduct {
 		supplierRate = 0
 	}
 
-	price, err := strconv.Atoi(p.Price)
+	priceTemp := strings.Fields(p.Price)
+	priceTemp = priceTemp[:len(priceTemp)-1]
+
+	price := ""
+	for _, pricePart := range priceTemp {
+		price += pricePart
+	}
+	priceInt, err := strconv.Atoi(price)
 
 	if err != nil {
-		price = 0
+		priceInt = 0
 	}
 
 	return &parser.BaseProduct{
 		Marketplace:    config.AVITO,
 		ProductID:      p.ID,
 		Name:           p.Name,
-		PriceActual:    int64(price),
+		PriceActual:    int64(priceInt),
 		Supplier:       p.Supplier,
 		SupplierRating: supplierRate,
 	}

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -87,7 +88,8 @@ func (p *AvitoParser) parseProductPage(ctx context.Context, pageURL string) (*pa
 	var htmlContent string
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(pageURL),
-		chromedp.WaitVisible(`h1`, chromedp.ByQuery),
+		//chromedp.WaitVisible(`h1`, chromedp.ByQuery),
+		chromedp.WaitVisible(`[data-marker="item-view/item-price"]`, chromedp.ByQuery),
 		chromedp.Sleep(3*time.Second),
 		chromedp.OuterHTML("html", &htmlContent),
 	)
@@ -100,12 +102,12 @@ func (p *AvitoParser) parseProductPage(ctx context.Context, pageURL string) (*pa
 		return nil, err
 	}
 
-	// fullHTML, _ := doc.Html()
-	// err = os.WriteFile("_page.html", []byte(fullHTML), 0644)
-	// if err != nil {
-	//     log.Fatal(err)
-	// }
-	// log.Print("HTML сохранён в _page.html")
+	fullHTML, _ := doc.Html()
+	err = os.WriteFile("_page.html", []byte(fullHTML), 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Print("HTML сохранён в _page.html")
 
 	product := &AvitoProduct{}
 
@@ -116,7 +118,7 @@ func (p *AvitoParser) parseProductPage(ctx context.Context, pageURL string) (*pa
 		product.Name = strings.TrimSpace(doc.Find(`h1`).First().Text())
 	}
 
-	product.Price = strings.Fields(doc.Find(`[data-marker="item-view/item-price"]`).First().Text())[0]
+	product.Price = (doc.Find(`[data-marker="item-view/item-price"]`).First().Text())
 	product.Supplier = doc.Find(`[data-marker="seller-info/name"]`).First().Text()
 	product.SupplierRating, _ = doc.Find(`[data-marker="sellerRate"] meta[itemprop="ratingValue"]`).Attr("content")
 
@@ -135,8 +137,9 @@ func (p *AvitoParser) getProductLinks(ctx context.Context, query string, limit i
 	var links []string
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(searchURL),
-		chromedp.WaitVisible(`[data-marker="item"]`, chromedp.ByQuery),
-		chromedp.Sleep(3*time.Second),
+		chromedp.WaitVisible(`[data-marker="item-title"]`, chromedp.ByQuery),
+		//chromedp.WaitVisible(`[data-marker="item"]`, chromedp.ByQuery),
+		chromedp.Sleep(1*time.Second),
 		chromedp.Evaluate(fmt.Sprintf(`
             (function() {
                 const items = document.querySelectorAll('[data-marker="item"]');
@@ -165,7 +168,7 @@ func (p *AvitoParser) getProductLinks(ctx context.Context, query string, limit i
 }
 
 func (p *AvitoParser) parseProducts(ctx context.Context, links []string) <-chan *parser.BaseProduct {
-	sem := make(chan struct{}, 2)
+	sem := make(chan struct{}, 3)
 	results := make(chan *parser.BaseProduct, len(links))
 	var wg sync.WaitGroup
 
@@ -206,5 +209,4 @@ func (p *AvitoParser) parseProducts(ctx context.Context, links []string) <-chan 
 	}()
 
 	return results
-
 }

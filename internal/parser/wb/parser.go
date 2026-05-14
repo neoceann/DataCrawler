@@ -111,6 +111,10 @@ func (p *WBParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) (
 		return nil, err
 	}
 
+	if len(resp.Products) > s.Limit {
+		resp.Products = resp.Products[:s.Limit]
+	}
+
 	log.Printf("Received products from %s: %d", p.Name(), len(resp.Products))
 
 	return resp.ToBaseProducts(), nil
