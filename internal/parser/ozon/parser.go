@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -17,6 +16,13 @@ import (
 	"crawler/internal/browser"
 	"crawler/internal/config"
 	"crawler/internal/parser"
+	parserErrors "crawler/internal/parser/errors"
+	"crawler/internal/parser/helpers"
+)
+
+const (
+	BaseURLSearch  = "https://www.ozon.ru/search/"
+	BaseURLProduct = "https://www.ozon.ru/product/"
 )
 
 type OzonParser struct {
@@ -46,11 +52,10 @@ func (p *OzonParser) Name() string {
 
 func (p *OzonParser) Close() {
 	p.browser.Close()
-
 }
 
 func (p *OzonParser) GetProductByID(ctx context.Context, productID string) (*parser.BaseProduct, error) {
-	url := fmt.Sprintf("https://www.ozon.ru/product/%s/", productID)
+	url := fmt.Sprintf("%s%s/", BaseURLProduct, productID)
 
 	ctx, cancel := p.browser.NewTab(ctx)
 	defer cancel()
@@ -84,7 +89,7 @@ func (p *OzonParser) GetProductByID(ctx context.Context, productID string) (*par
 	})
 
 	if jsonLD == "" {
-		return nil, fmt.Errorf("empty data for this product")
+		return nil, parserErrors.ErrEmptyDataForProduct
 	}
 
 	var ozonProduct OzonProduct
@@ -95,7 +100,7 @@ func (p *OzonParser) GetProductByID(ctx context.Context, productID string) (*par
 }
 
 func (p *OzonParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) ([]*parser.BaseProduct, error) {
-	searchURL := fmt.Sprintf("https://www.ozon.ru/search/?text=%s&sorting=%s", url.QueryEscape(s.Query), s.GetSortParamForMarket(p.Name(), s.SortBy))
+	searchURL := fmt.Sprintf("%s?text=%s&sorting=%s", BaseURLSearch, url.QueryEscape(s.Query), s.GetSortParamForMarket(p.Name(), s.SortBy))
 
 	ctx, cancel := p.browser.NewTab(ctx)
 	defer cancel()
@@ -121,50 +126,11 @@ func (p *OzonParser) GetTopProducts(ctx context.Context, s *config.SearchConfig)
 		return nil, fmt.Errorf("chromedp error: %w", err)
 	}
 
-	var wg sync.WaitGroup
-	results := make(chan *parser.BaseProduct, len(links))
-
-	sem := make(chan struct{}, 3)
-
-	for _, link := range links {
-		wg.Add(1)
-		go func(l string) {
-			defer wg.Done()
-
-           select {
-            case sem <- struct{}{}:
-                defer func() { <-sem }()
-            case <-ctx.Done():
-                return
-            }
-
-			select {
-            case <-ctx.Done():
-                return
-            default:
-            }
-
-			id := extractIDFromURL(l)
-
-			product, err := p.GetProductByID(ctx, id)
-			if err != nil {
-				log.Printf("Warning: failed to parse %s: %v", l, err)
-				return
-			}
-			
-			select {
-            case results <- product:
-            case <-ctx.Done():
-                return
-            }
-
-		}(link)
+	if len(links) == 0 {
+		return nil, parserErrors.ErrEmptyLinks
 	}
 
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
+	results := p.parseProducts(ctx, links)
 
 	var products []*parser.BaseProduct
 	for p := range results {
@@ -176,7 +142,50 @@ func (p *OzonParser) GetTopProducts(ctx context.Context, s *config.SearchConfig)
 	return products, nil
 }
 
-func extractIDFromURL(url string) string {
-	re := regexp.MustCompile(`(\d{8,})`)
-	return re.FindString(url)
+func (p *OzonParser) parseProducts(ctx context.Context, links []string) <-chan *parser.BaseProduct {
+	results := make(chan *parser.BaseProduct, len(links))
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 3)
+
+	for _, link := range links {
+		wg.Add(1)
+		go func(l string) {
+			defer wg.Done()
+
+			select {
+			case sem <- struct{}{}:
+				defer func() { <-sem }()
+			case <-ctx.Done():
+				return
+			}
+
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
+			id := helpers.ExtractIDFromURL(l)
+
+			product, err := p.GetProductByID(ctx, id)
+			if err != nil {
+				log.Printf("Warning: failed to parse %s: %v", l, err)
+				return
+			}
+
+			select {
+			case results <- product:
+			case <-ctx.Done():
+				return
+			}
+
+		}(link)
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	return results
 }

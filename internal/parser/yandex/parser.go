@@ -5,19 +5,22 @@ import (
 	"crawler/internal/browser"
 	"crawler/internal/config"
 	"crawler/internal/parser"
+	parserErrors "crawler/internal/parser/errors"
+	"crawler/internal/parser/helpers"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/url"
-	"regexp"
-
-	"sync"
-
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/chromedp"
+)
+
+const (
+	BaseURLSearch = "https://market.yandex.ru/search"
 )
 
 type YandexParser struct {
@@ -57,46 +60,7 @@ func (p *YandexParser) GetTopProducts(ctx context.Context, s *config.SearchConfi
 
 	log.Printf("Getting top %d products from %s...", s.Limit, p.Name())
 
-	sem := make(chan struct{}, 2)
-
-	results := make(chan *parser.BaseProduct, len(links))
-	var wg sync.WaitGroup
-
-	for _, link := range links {
-		wg.Add(1)
-		go func(l string) {
-			defer wg.Done()
-
-           select {
-            case sem <- struct{}{}:
-                defer func() { <-sem }()
-            case <-ctx.Done():
-                return
-            }
-
-			select {
-            case <-ctx.Done():
-                return
-            default:
-            }
-
-			product, err := p.parseProductPage(ctx, l)
-			if err != nil {
-				log.Printf("Warning: failed to parse %s: %v", l, err)
-				return
-			}
-			select {
-            case results <- product:
-            case <-ctx.Done():
-                return
-            }
-		}(link)
-	}
-
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
+	results := p.parseProducts(ctx, links)
 
 	var products []*parser.BaseProduct
 	for product := range results {
@@ -146,16 +110,16 @@ func (p *YandexParser) parseProductPage(ctx context.Context, pageURL string) (*p
 	})
 
 	if jsonLD == "" {
-		return nil, fmt.Errorf("empty data for this product")
+		return nil, parserErrors.ErrEmptyDataForProduct
 	}
 
-	var ozonProduct YandexProduct
+	var yandexProduct YandexProduct
 
-	json.Unmarshal([]byte(jsonLD), &ozonProduct)
+	json.Unmarshal([]byte(jsonLD), &yandexProduct)
 
-	ozonProduct.ID = extractIDFromURL(pageURL)
+	yandexProduct.ID = helpers.ExtractIDFromURL(pageURL)
 
-	return ozonProduct.ToBaseProduct(), nil
+	return yandexProduct.ToBaseProduct(), nil
 }
 
 func (p *YandexParser) getProductLinks(ctx context.Context, s *config.SearchConfig) ([]string, error) {
@@ -165,7 +129,7 @@ func (p *YandexParser) getProductLinks(ctx context.Context, s *config.SearchConf
 	ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
-	searchURL := fmt.Sprintf("https://market.yandex.ru/search?text=%s&how=%s", url.QueryEscape(s.Query), s.GetSortParamForMarket(p.Name(), s.SortBy))
+	searchURL := fmt.Sprintf("%s?text=%s&how=%s", BaseURLSearch, url.QueryEscape(s.Query), s.GetSortParamForMarket(p.Name(), s.SortBy))
 
 	var links []string
 	err := chromedp.Run(ctx,
@@ -181,17 +145,57 @@ func (p *YandexParser) getProductLinks(ctx context.Context, s *config.SearchConf
 	)
 
 	if len(links) == 0 {
-		return nil, fmt.Errorf("empty links")
+		return nil, parserErrors.ErrEmptyLinks
 	}
 
 	return links, err
 }
 
-func (p *YandexParser) GetProductByID(ctx context.Context, productID string) (*parser.BaseProduct, error) {
-	return nil, nil
+func (p *YandexParser) parseProducts(ctx context.Context, links []string) <-chan *parser.BaseProduct {
+	results := make(chan *parser.BaseProduct, len(links))
+
+	sem := make(chan struct{}, 2)
+	var wg sync.WaitGroup
+
+	for _, link := range links {
+		wg.Add(1)
+		go func(l string) {
+			defer wg.Done()
+
+			select {
+			case sem <- struct{}{}:
+				defer func() { <-sem }()
+			case <-ctx.Done():
+				return
+			}
+
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
+			product, err := p.parseProductPage(ctx, l)
+			if err != nil {
+				log.Printf("Warning: failed to parse %s: %v", l, err)
+				return
+			}
+			select {
+			case results <- product:
+			case <-ctx.Done():
+				return
+			}
+		}(link)
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	return results
 }
 
-func extractIDFromURL(url string) string {
-	re := regexp.MustCompile(`(\d{8,})`)
-	return re.FindString(url)
+func (p *YandexParser) GetProductByID(ctx context.Context, productID string) (*parser.BaseProduct, error) {
+	return nil, nil
 }

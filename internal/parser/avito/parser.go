@@ -5,18 +5,21 @@ import (
 	"crawler/internal/browser"
 	"crawler/internal/config"
 	"crawler/internal/parser"
+	parserErrors "crawler/internal/parser/errors"
+	"crawler/internal/parser/helpers"
 	"fmt"
 	"log"
 	"net/url"
-
-	"regexp"
-	"sync"
-
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/chromedp"
+)
+
+const (
+	BaseURLSearch = "https://www.avito.ru/kazan"
 )
 
 type AvitoParser struct {
@@ -56,46 +59,7 @@ func (p *AvitoParser) GetTopProducts(ctx context.Context, s *config.SearchConfig
 
 	log.Printf("Getting top %d products from %s...", s.Limit, p.Name())
 
-	sem := make(chan struct{}, 2)
-
-	results := make(chan *parser.BaseProduct, len(links))
-	var wg sync.WaitGroup
-
-	for _, link := range links {
-		wg.Add(1)
-		go func(l string) {
-			defer wg.Done()
-
-           select {
-            case sem <- struct{}{}:
-                defer func() { <-sem }()
-            case <-ctx.Done():
-                return
-            }
-
-			select {
-            case <-ctx.Done():
-                return
-            default:
-            }
-
-			product, err := p.parseProductPage(ctx, l)
-			if err != nil {
-				log.Printf("Warning: failed to parse %s: %v", l, err)
-				return
-			}
-			select {
-            case results <- product:
-            case <-ctx.Done():
-                return
-            }
-		}(link)
-	}
-
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
+	results := p.parseProducts(ctx, links)
 
 	var products []*parser.BaseProduct
 	for product := range results {
@@ -145,7 +109,7 @@ func (p *AvitoParser) parseProductPage(ctx context.Context, pageURL string) (*pa
 
 	product := &AvitoProduct{}
 
-	product.ID = extractIDFromURL(pageURL)
+	product.ID = helpers.ExtractIDFromURL(pageURL)
 
 	product.Name = strings.TrimSpace(doc.Find(`h1[data-marker="item-view/title"]`).Text())
 	if product.Name == "" {
@@ -166,7 +130,7 @@ func (p *AvitoParser) getProductLinks(ctx context.Context, query string, limit i
 	ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	searchURL := fmt.Sprintf("https://www.avito.ru/kazan?q=%s казань", url.QueryEscape(query))
+	searchURL := fmt.Sprintf("%s?q=%s казань", BaseURLSearch, url.QueryEscape(query))
 
 	var links []string
 	err := chromedp.Run(ctx,
@@ -194,13 +158,53 @@ func (p *AvitoParser) getProductLinks(ctx context.Context, query string, limit i
 	}
 
 	if len(links) == 0 {
-		return nil, fmt.Errorf("no product links found for query: %s", query)
+		return nil, parserErrors.ErrEmptyLinks
 	}
 
 	return links, nil
 }
 
-func extractIDFromURL(url string) string {
-	re := regexp.MustCompile(`(\d{8,})`)
-	return re.FindString(url)
+func (p *AvitoParser) parseProducts(ctx context.Context, links []string) <-chan *parser.BaseProduct {
+	sem := make(chan struct{}, 2)
+	results := make(chan *parser.BaseProduct, len(links))
+	var wg sync.WaitGroup
+
+	for _, link := range links {
+		wg.Add(1)
+		go func(l string) {
+			defer wg.Done()
+
+			select {
+			case sem <- struct{}{}:
+				defer func() { <-sem }()
+			case <-ctx.Done():
+				return
+			}
+
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
+			product, err := p.parseProductPage(ctx, l)
+			if err != nil {
+				log.Printf("Warning: failed to parse %s: %v", l, err)
+				return
+			}
+			select {
+			case results <- product:
+			case <-ctx.Done():
+				return
+			}
+		}(link)
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	return results
+
 }

@@ -24,17 +24,17 @@ func New(cfg *BrowserConfig) (*Browser, error) {
 }
 
 func (b *Browser) NewTab(parentCtx context.Context) (context.Context, context.CancelFunc) {
-    ctx, cancel := chromedp.NewContext(b.allocCtx)
-    
-    go func() {
-        select {
-        case <-parentCtx.Done():
-            cancel()
-        case <-ctx.Done():
-        }
-    }()
-    
-    return ctx, cancel
+	ctx, cancel := chromedp.NewContext(b.allocCtx)
+
+	go func() {
+		select {
+		case <-parentCtx.Done():
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
+	return ctx, cancel
 }
 
 func (b *Browser) Close() {
