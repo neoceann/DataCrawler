@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"os"
+	//"os"
 	"strings"
 	"sync"
 	"time"
@@ -82,15 +82,15 @@ func (p *AvitoParser) parseProductPage(ctx context.Context, pageURL string) (*pa
 	ctx, cancel := p.browser.NewTab(ctx)
 	defer cancel()
 
-	ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
+	ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	var htmlContent string
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(pageURL),
 		//chromedp.WaitVisible(`h1`, chromedp.ByQuery),
-		chromedp.WaitVisible(`[data-marker="item-view/item-price"]`, chromedp.ByQuery),
-		chromedp.Sleep(3*time.Second),
+		chromedp.WaitReady(`[data-marker="item-view/item-price"]`, chromedp.ByQuery),
+		//chromedp.Sleep(3*time.Second),
 		chromedp.OuterHTML("html", &htmlContent),
 	)
 	if err != nil {
@@ -102,12 +102,12 @@ func (p *AvitoParser) parseProductPage(ctx context.Context, pageURL string) (*pa
 		return nil, err
 	}
 
-	fullHTML, _ := doc.Html()
-	err = os.WriteFile("_page.html", []byte(fullHTML), 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Print("HTML сохранён в _page.html")
+	// fullHTML, _ := doc.Html()
+	// err = os.WriteFile("_page.html", []byte(fullHTML), 0644)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// log.Print("HTML сохранён в _page.html")
 
 	product := &AvitoProduct{}
 
@@ -129,7 +129,7 @@ func (p *AvitoParser) getProductLinks(ctx context.Context, query string, limit i
 	ctx, cancel := p.browser.NewTab(ctx)
 	defer cancel()
 
-	ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel = context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 
 	searchURL := fmt.Sprintf("%s?q=%s казань", BaseURLSearch, url.QueryEscape(query))
@@ -168,7 +168,7 @@ func (p *AvitoParser) getProductLinks(ctx context.Context, query string, limit i
 }
 
 func (p *AvitoParser) parseProducts(ctx context.Context, links []string) <-chan *parser.BaseProduct {
-	sem := make(chan struct{}, 3)
+	sem := make(chan struct{}, 1)
 	results := make(chan *parser.BaseProduct, len(links))
 	var wg sync.WaitGroup
 
@@ -197,6 +197,7 @@ func (p *AvitoParser) parseProducts(ctx context.Context, links []string) <-chan 
 			}
 			select {
 			case results <- product:
+				time.Sleep(1 * time.Second)
 			case <-ctx.Done():
 				return
 			}
