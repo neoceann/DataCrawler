@@ -87,19 +87,6 @@ func (d *DataCrawler) Close() {
 	d.Pool.Close()
 }
 
-func (d *DataCrawler) GetProductByID(ctx context.Context, marketplace, productID string) (*parser.BaseProduct, error) {
-	p, err := d.findParserForMarketplace(marketplace)
-
-	if err != nil {
-		return nil, err
-	}
-
-	processCtx, processCancel := context.WithTimeout(ctx, 15*time.Second)
-	defer processCancel()
-
-	return p.GetProductByID(processCtx, productID)
-}
-
 func (d *DataCrawler) GetTopProducts(ctx context.Context) ([]*parser.BaseProduct, error) {
 	var mu sync.Mutex
 	var products []*parser.BaseProduct

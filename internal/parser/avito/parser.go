@@ -10,9 +10,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	//"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -60,7 +58,7 @@ func (p *AvitoParser) GetTopProducts(ctx context.Context, s *config.SearchConfig
 
 	log.Printf("Getting top %d products from %s...", s.Limit, p.Name())
 
-	results := p.parseProducts(ctx, links)
+	results := helpers.ParseProducts(ctx, p, 1, links)
 
 	var products []*parser.BaseProduct
 	for product := range results {
@@ -78,7 +76,7 @@ func (p *AvitoParser) GetProductByID(ctx context.Context, productID string) (*pa
 	return nil, nil
 }
 
-func (p *AvitoParser) parseProductPage(ctx context.Context, pageURL string) (*parser.BaseProduct, error) {
+func (p *AvitoParser) ParseProductPage(ctx context.Context, pageURL string) (*parser.BaseProduct, error) {
 	ctx, cancel := p.browser.NewTab(ctx)
 	defer cancel()
 
@@ -165,49 +163,4 @@ func (p *AvitoParser) getProductLinks(ctx context.Context, query string, limit i
 	}
 
 	return links, nil
-}
-
-func (p *AvitoParser) parseProducts(ctx context.Context, links []string) <-chan *parser.BaseProduct {
-	sem := make(chan struct{}, 1)
-	results := make(chan *parser.BaseProduct, len(links))
-	var wg sync.WaitGroup
-
-	for _, link := range links {
-		wg.Add(1)
-		go func(l string) {
-			defer wg.Done()
-
-			select {
-			case sem <- struct{}{}:
-				defer func() { <-sem }()
-			case <-ctx.Done():
-				return
-			}
-
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-
-			product, err := p.parseProductPage(ctx, l)
-			if err != nil {
-				log.Printf("Warning: failed to parse %s: %v", l, err)
-				return
-			}
-			select {
-			case results <- product:
-				time.Sleep(1 * time.Second)
-			case <-ctx.Done():
-				return
-			}
-		}(link)
-	}
-
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
-
-	return results
 }

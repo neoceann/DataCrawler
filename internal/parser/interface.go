@@ -11,7 +11,7 @@ type Parser interface {
 
 	GetTopProducts(ctx context.Context, s *config.SearchConfig) ([]*BaseProduct, error)
 
-	GetProductByID(ctx context.Context, productID string) (*BaseProduct, error)
+	ParseProductPage(ctx context.Context, pageURL string) (*BaseProduct, error)
 
 	Close()
 }

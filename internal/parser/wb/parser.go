@@ -43,40 +43,6 @@ func (p *WBParser) Name() string {
 func (p *WBParser) Close() {
 }
 
-func (p *WBParser) GetProductByID(ctx context.Context, productID string) (*parser.BaseProduct, error) {
-	URL := fmt.Sprintf("%s?%s&nm=%s",
-		BaseURLProduct, CommonParams, productID)
-
-	req, _ := http.NewRequestWithContext(ctx, "GET", URL, nil)
-	req.Header.Set("deviceid", p.cfg.WBDeviceID)
-	req.Header.Set("Cookie", fmt.Sprintf("x_wbaas_token=%s; _wbauid=%s; _wbauid=%s", p.cfg.WBXWbaasToken, p.cfg.WBWbauid1, p.cfg.WBWbauid2))
-	req.Header.Set("user-agent", p.cfg.UserAgent)
-
-	response, err := p.client.Do(req)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(response.Body)
-		return nil, fmt.Errorf("http %d: %s", response.StatusCode, string(body))
-	}
-
-	body, _ := io.ReadAll(response.Body)
-
-	var resp WBTopProducts
-
-	if err := json.Unmarshal(body, &resp); err != nil {
-		return nil, err
-	}
-
-	return resp.Products[0].ToBaseProduct(), nil
-
-}
-
 func (p *WBParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) ([]*parser.BaseProduct, error) {
 	q := url.QueryEscape(s.Query)
 
@@ -119,3 +85,41 @@ func (p *WBParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) (
 
 	return resp.ToBaseProducts(), nil
 }
+
+func (p *WBParser) ParseProductPage(ctx context.Context, pageURL string) (*parser.BaseProduct, error) {
+	return nil, nil
+}
+
+// func (p *WBParser) GetProductByID(ctx context.Context, productID string) (*parser.BaseProduct, error) {
+// 	URL := fmt.Sprintf("%s?%s&nm=%s",
+// 		BaseURLProduct, CommonParams, productID)
+
+// 	req, _ := http.NewRequestWithContext(ctx, "GET", URL, nil)
+// 	req.Header.Set("deviceid", p.cfg.WBDeviceID)
+// 	req.Header.Set("Cookie", fmt.Sprintf("x_wbaas_token=%s; _wbauid=%s; _wbauid=%s", p.cfg.WBXWbaasToken, p.cfg.WBWbauid1, p.cfg.WBWbauid2))
+// 	req.Header.Set("user-agent", p.cfg.UserAgent)
+
+// 	response, err := p.client.Do(req)
+
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	defer response.Body.Close()
+
+// 	if response.StatusCode != http.StatusOK {
+// 		body, _ := io.ReadAll(response.Body)
+// 		return nil, fmt.Errorf("http %d: %s", response.StatusCode, string(body))
+// 	}
+
+// 	body, _ := io.ReadAll(response.Body)
+
+// 	var resp WBTopProducts
+
+// 	if err := json.Unmarshal(body, &resp); err != nil {
+// 		return nil, err
+// 	}
+
+// 	return resp.Products[0].ToBaseProduct(), nil
+
+// }

@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -54,7 +53,8 @@ func (p *OzonParser) Close() {
 	p.browser.Close()
 }
 
-func (p *OzonParser) GetProductByID(ctx context.Context, productID string) (*parser.BaseProduct, error) {
+func (p *OzonParser) ParseProductPage(ctx context.Context, pageURL string) (*parser.BaseProduct, error) {
+	productID := helpers.ExtractIDFromURL(pageURL)
 	url := fmt.Sprintf("%s%s/", BaseURLProduct, productID)
 
 	ctx, cancel := p.browser.NewTab(ctx)
@@ -130,7 +130,7 @@ func (p *OzonParser) GetTopProducts(ctx context.Context, s *config.SearchConfig)
 		return nil, parserErrors.ErrEmptyLinks
 	}
 
-	results := p.parseProducts(ctx, links)
+	results := helpers.ParseProducts(ctx, p, 3, links)
 
 	var products []*parser.BaseProduct
 	for p := range results {
@@ -140,52 +140,4 @@ func (p *OzonParser) GetTopProducts(ctx context.Context, s *config.SearchConfig)
 	log.Printf("Received products from %s: %d", p.Name(), len(products))
 
 	return products, nil
-}
-
-func (p *OzonParser) parseProducts(ctx context.Context, links []string) <-chan *parser.BaseProduct {
-	results := make(chan *parser.BaseProduct, len(links))
-	var wg sync.WaitGroup
-	sem := make(chan struct{}, 3)
-
-	for _, link := range links {
-		wg.Add(1)
-		go func(l string) {
-			defer wg.Done()
-
-			select {
-			case sem <- struct{}{}:
-				defer func() { <-sem }()
-			case <-ctx.Done():
-				return
-			}
-
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-
-			id := helpers.ExtractIDFromURL(l)
-
-			product, err := p.GetProductByID(ctx, id)
-			if err != nil {
-				log.Printf("Warning: failed to parse %s: %v", l, err)
-				return
-			}
-
-			select {
-			case results <- product:
-			case <-ctx.Done():
-				return
-			}
-
-		}(link)
-	}
-
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
-
-	return results
 }
