@@ -30,10 +30,10 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Print("\nProducts saved to DB\n")
-	} else {
-		crawler.SaveProductsToFile(p)
-		log.Print("\nProducts saved to file\n")
 
+		log.Println("\nProducts saved to DB and \"products.json\"")
+	} else {
+		log.Println("\nProducts saved to \"products.json\"")
 	}
+	crawler.SaveProductsToFile(p)
 }
