@@ -92,6 +92,8 @@ func (p *AvitoParser) ParseProductPage(ctx context.Context, pageURL string, cach
 		}
 	}
 
+	log.Printf("Parsing data for product: %s:%s\n", p.Name(), productID)
+
 	ctx, cancel := p.browser.NewTab(ctx)
 	defer cancel()
 

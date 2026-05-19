@@ -68,6 +68,8 @@ func (p *OzonParser) ParseProductPage(ctx context.Context, pageURL string, cache
 		}
 	}
 
+	log.Printf("Parsing data for product: %s:%s\n", p.Name(), productID)
+
 	url := fmt.Sprintf("%s%s/", BaseURLProduct, productID)
 
 	ctx, cancel := p.browser.NewTab(ctx)

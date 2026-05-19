@@ -35,7 +35,7 @@ func (c *ProductCache) Get(ctx context.Context, market, productID string) (*m.Ba
 	data, err := c.client.Get(ctx, key).Bytes()
 
 	if err == redis.Nil {
-		return nil, fmt.Errorf("key not found in redis")
+		return nil, nil
 	}
 
 	if err != nil {

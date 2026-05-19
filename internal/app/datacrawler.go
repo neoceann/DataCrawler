@@ -37,6 +37,10 @@ func New(ctx context.Context) (*DataCrawler, error) {
 
 	cache, err := cache.NewProductCache(c.RedisAddr, time.Duration(c.RedisCacheDuration)*time.Minute)
 
+	if err != nil {
+		log.Print("Cache not active")
+	}
+
 	sc, err := config.NewSearchConfig()
 
 	if err != nil {

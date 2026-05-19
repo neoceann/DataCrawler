@@ -88,6 +88,8 @@ func (p *YandexParser) ParseProductPage(ctx context.Context, pageURL string, cac
 		}
 	}
 
+	log.Printf("Parsing data for product: %s:%s\n", p.Name(), productID)
+
 	ctx, cancel := p.browser.NewTab(ctx)
 	defer cancel()
 
