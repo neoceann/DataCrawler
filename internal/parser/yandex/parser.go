@@ -60,7 +60,7 @@ func (p *YandexParser) GetTopProducts(ctx context.Context, s *config.SearchConfi
 
 	log.Printf("Getting top %d products from %s...", s.Limit, p.Name())
 
-	results := helpers.ParseProducts(ctx, p, 3, links)
+	results := helpers.ParseProducts(ctx, p, 3, links, cache)
 
 	var products []*parser.BaseProduct
 	for product := range results {
@@ -74,7 +74,20 @@ func (p *YandexParser) GetTopProducts(ctx context.Context, s *config.SearchConfi
 	return products, nil
 }
 
-func (p *YandexParser) ParseProductPage(ctx context.Context, pageURL string) (*parser.BaseProduct, error) {
+func (p *YandexParser) ParseProductPage(ctx context.Context, pageURL string, cache *cache.ProductCache) (*parser.BaseProduct, error) {
+	productID := helpers.ExtractIDFromURL(pageURL)
+
+	if cache != nil {
+		product, err := cache.Get(ctx, p.Name(), productID)
+
+		if err != nil {
+			log.Printf("Cache error for: %s:%s:%v", p.Name(), productID, err)
+		} else if product != nil {
+			log.Printf("Product from cache: %s:%s", p.Name(), productID)
+			return product, nil
+		}
+	}
+
 	ctx, cancel := p.browser.NewTab(ctx)
 	defer cancel()
 
@@ -117,9 +130,16 @@ func (p *YandexParser) ParseProductPage(ctx context.Context, pageURL string) (*p
 
 	json.Unmarshal([]byte(jsonLD), &yandexProduct)
 
-	yandexProduct.ID = helpers.ExtractIDFromURL(pageURL)
+	yandexProduct.ID = productID
 
-	return yandexProduct.ToBaseProduct(), nil
+	baseProduct := yandexProduct.ToBaseProduct()
+	if cache != nil {
+		if err := cache.Set(ctx, baseProduct); err != nil {
+			log.Printf("Failed to save data in cache: %v", err)
+		}
+	}
+
+	return baseProduct, nil
 }
 
 func (p *YandexParser) getProductLinks(ctx context.Context, s *config.SearchConfig) ([]string, error) {

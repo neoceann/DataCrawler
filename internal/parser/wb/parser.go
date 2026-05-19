@@ -87,7 +87,7 @@ func (p *WBParser) GetTopProducts(ctx context.Context, s *config.SearchConfig, c
 	return resp.ToBaseProducts(), nil
 }
 
-func (p *WBParser) ParseProductPage(ctx context.Context, pageURL string) (*parser.BaseProduct, error) {
+func (p *WBParser) ParseProductPage(ctx context.Context, pageURL string, cache *cache.ProductCache) (*parser.BaseProduct, error) {
 	return nil, nil
 }
 

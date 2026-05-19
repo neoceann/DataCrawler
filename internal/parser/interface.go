@@ -14,7 +14,7 @@ type Parser interface {
 
 	GetTopProducts(ctx context.Context, s *config.SearchConfig, cache *cache.ProductCache) ([]*BaseProduct, error)
 
-	ParseProductPage(ctx context.Context, pageURL string) (*BaseProduct, error)
+	ParseProductPage(ctx context.Context, pageURL string, cache *cache.ProductCache) (*BaseProduct, error)
 
 	Close()
 }

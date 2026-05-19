@@ -3,6 +3,7 @@ package helpers
 import (
 	"context"
 	"crawler/internal/parser"
+	cache "crawler/internal/redis"
 	"log"
 	"regexp"
 	"sync"
@@ -13,7 +14,7 @@ func ExtractIDFromURL(url string) string {
 	return re.FindString(url)
 }
 
-func ParseProducts(ctx context.Context, p parser.Parser, buffer int, links []string) <-chan *parser.BaseProduct {
+func ParseProducts(ctx context.Context, p parser.Parser, buffer int, links []string, cache *cache.ProductCache) <-chan *parser.BaseProduct {
 	results := make(chan *parser.BaseProduct, len(links))
 
 	sem := make(chan struct{}, 2)
@@ -37,7 +38,7 @@ func ParseProducts(ctx context.Context, p parser.Parser, buffer int, links []str
 			default:
 			}
 
-			product, err := p.ParseProductPage(ctx, l)
+			product, err := p.ParseProductPage(ctx, l, cache)
 			if err != nil {
 				log.Printf("Warning: failed to parse %s: %v", l, err)
 				return

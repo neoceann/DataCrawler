@@ -54,8 +54,20 @@ func (p *OzonParser) Close() {
 	p.browser.Close()
 }
 
-func (p *OzonParser) ParseProductPage(ctx context.Context, pageURL string) (*parser.BaseProduct, error) {
+func (p *OzonParser) ParseProductPage(ctx context.Context, pageURL string, cache *cache.ProductCache) (*parser.BaseProduct, error) {
 	productID := helpers.ExtractIDFromURL(pageURL)
+
+	if cache != nil {
+		product, err := cache.Get(ctx, p.Name(), productID)
+
+		if err != nil {
+			log.Printf("Cache error for: %s:%s:%v", p.Name(), productID, err)
+		} else if product != nil {
+			log.Printf("Product from cache: %s:%s", p.Name(), productID)
+			return product, nil
+		}
+	}
+
 	url := fmt.Sprintf("%s%s/", BaseURLProduct, productID)
 
 	ctx, cancel := p.browser.NewTab(ctx)
@@ -97,7 +109,14 @@ func (p *OzonParser) ParseProductPage(ctx context.Context, pageURL string) (*par
 
 	json.Unmarshal([]byte(jsonLD), &ozonProduct)
 
-	return ozonProduct.ToBaseProduct(), nil
+	baseProduct := ozonProduct.ToBaseProduct()
+	if cache != nil {
+		if err := cache.Set(ctx, baseProduct); err != nil {
+			log.Printf("Failed to save data in cache: %v", err)
+		}
+	}
+
+	return baseProduct, nil
 }
 
 func (p *OzonParser) GetTopProducts(ctx context.Context, s *config.SearchConfig, cache *cache.ProductCache) ([]*parser.BaseProduct, error) {
@@ -131,7 +150,7 @@ func (p *OzonParser) GetTopProducts(ctx context.Context, s *config.SearchConfig,
 		return nil, parserErrors.ErrEmptyLinks
 	}
 
-	results := helpers.ParseProducts(ctx, p, 3, links)
+	results := helpers.ParseProducts(ctx, p, 3, links, cache)
 
 	var products []*parser.BaseProduct
 	for p := range results {

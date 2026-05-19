@@ -59,7 +59,7 @@ func (p *AvitoParser) GetTopProducts(ctx context.Context, s *config.SearchConfig
 
 	log.Printf("Getting top %d products from %s...", s.Limit, p.Name())
 
-	results := helpers.ParseProducts(ctx, p, 1, links)
+	results := helpers.ParseProducts(ctx, p, 1, links, cache)
 
 	var products []*parser.BaseProduct
 	for product := range results {
@@ -77,7 +77,21 @@ func (p *AvitoParser) GetProductByID(ctx context.Context, productID string) (*pa
 	return nil, nil
 }
 
-func (p *AvitoParser) ParseProductPage(ctx context.Context, pageURL string) (*parser.BaseProduct, error) {
+func (p *AvitoParser) ParseProductPage(ctx context.Context, pageURL string, cache *cache.ProductCache) (*parser.BaseProduct, error) {
+
+	productID := helpers.ExtractIDFromURL(pageURL)
+
+	if cache != nil {
+		product, err := cache.Get(ctx, p.Name(), productID)
+
+		if err != nil {
+			log.Printf("Cache error for: %s:%s:%v", p.Name(), productID, err)
+		} else if product != nil {
+			log.Printf("Product from cache: %s:%s", p.Name(), productID)
+			return product, nil
+		}
+	}
+
 	ctx, cancel := p.browser.NewTab(ctx)
 	defer cancel()
 
@@ -110,7 +124,7 @@ func (p *AvitoParser) ParseProductPage(ctx context.Context, pageURL string) (*pa
 
 	product := &AvitoProduct{}
 
-	product.ID = helpers.ExtractIDFromURL(pageURL)
+	product.ID = productID
 
 	product.Name = strings.TrimSpace(doc.Find(`h1[data-marker="item-view/title"]`).Text())
 	if product.Name == "" {
@@ -121,7 +135,14 @@ func (p *AvitoParser) ParseProductPage(ctx context.Context, pageURL string) (*pa
 	product.Supplier = doc.Find(`[data-marker="seller-info/name"]`).First().Text()
 	product.SupplierRating, _ = doc.Find(`[data-marker="sellerRate"] meta[itemprop="ratingValue"]`).Attr("content")
 
-	return product.ToBaseProduct(), nil
+	baseProduct := product.ToBaseProduct()
+	if cache != nil {
+		if err := cache.Set(ctx, baseProduct); err != nil {
+			log.Printf("Failed to save data in cache: %v", err)
+		}
+	}
+
+	return baseProduct, nil
 }
 
 func (p *AvitoParser) getProductLinks(ctx context.Context, query string, limit int) ([]string, error) {
