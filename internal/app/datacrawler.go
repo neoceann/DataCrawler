@@ -121,7 +121,7 @@ func (d *DataCrawler) GetTopProducts(ctx context.Context) ([]*parser.BaseProduct
 				return
 			}
 
-			product, err := p.GetTopProducts(processCtx, d.SearchConfig)
+			product, err := p.GetTopProducts(processCtx, d.SearchConfig, d.Cache)
 			if err != nil {
 				errChan <- fmt.Errorf("%s: %w", m, err)
 				return

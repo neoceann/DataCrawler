@@ -2,7 +2,7 @@ package cache
 
 import (
 	"context"
-	"crawler/internal/parser"
+	m "crawler/internal/parser/parser_model"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -29,7 +29,7 @@ func (c *ProductCache) Close() error {
 	return c.client.Close()
 }
 
-func (c *ProductCache) Get(ctx context.Context, market, productID string) (*parser.BaseProduct, error) {
+func (c *ProductCache) Get(ctx context.Context, market, productID string) (*m.BaseProduct, error) {
 	key := c.keyFormation(market, productID)
 
 	data, err := c.client.Get(ctx, key).Bytes()
@@ -42,7 +42,7 @@ func (c *ProductCache) Get(ctx context.Context, market, productID string) (*pars
 		return nil, err
 	}
 
-	var product parser.BaseProduct
+	var product m.BaseProduct
 
 	if err := json.Unmarshal(data, &product); err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (c *ProductCache) Get(ctx context.Context, market, productID string) (*pars
 	return &product, nil
 }
 
-func (c *ProductCache) Set(ctx context.Context, product *parser.BaseProduct) error {
+func (c *ProductCache) Set(ctx context.Context, product *m.BaseProduct) error {
 	key := c.keyFormation(product.Marketplace, product.ProductID)
 
 	data, err := json.Marshal(product)

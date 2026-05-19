@@ -7,6 +7,7 @@ import (
 	"crawler/internal/parser"
 	parserErrors "crawler/internal/parser/errors"
 	"crawler/internal/parser/helpers"
+	cache "crawler/internal/redis"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -51,7 +52,7 @@ func (p *YandexParser) Close() {
 	p.browser.Close()
 }
 
-func (p *YandexParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) ([]*parser.BaseProduct, error) {
+func (p *YandexParser) GetTopProducts(ctx context.Context, s *config.SearchConfig, cache *cache.ProductCache) ([]*parser.BaseProduct, error) {
 	links, err := p.getProductLinks(ctx, s)
 	if err != nil {
 		return nil, err

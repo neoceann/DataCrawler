@@ -7,6 +7,7 @@ import (
 	"crawler/internal/parser"
 	parserErrors "crawler/internal/parser/errors"
 	"crawler/internal/parser/helpers"
+	cache "crawler/internal/redis"
 	"fmt"
 	"log"
 	"net/url"
@@ -50,7 +51,7 @@ func (p *AvitoParser) Close() {
 	p.browser.Close()
 }
 
-func (p *AvitoParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) ([]*parser.BaseProduct, error) {
+func (p *AvitoParser) GetTopProducts(ctx context.Context, s *config.SearchConfig, cache *cache.ProductCache) ([]*parser.BaseProduct, error) {
 	links, err := p.getProductLinks(ctx, s.Query, s.Limit)
 	if err != nil {
 		return nil, err

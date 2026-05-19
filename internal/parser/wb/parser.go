@@ -12,6 +12,7 @@ import (
 
 	"crawler/internal/config"
 	"crawler/internal/parser"
+	cache "crawler/internal/redis"
 )
 
 const (
@@ -43,7 +44,7 @@ func (p *WBParser) Name() string {
 func (p *WBParser) Close() {
 }
 
-func (p *WBParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) ([]*parser.BaseProduct, error) {
+func (p *WBParser) GetTopProducts(ctx context.Context, s *config.SearchConfig, cache *cache.ProductCache) ([]*parser.BaseProduct, error) {
 	q := url.QueryEscape(s.Query)
 
 	URL := fmt.Sprintf("%s?%s&%s&q1=%s&query=%s&sort=%s&limit=%d",

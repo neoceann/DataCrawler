@@ -17,6 +17,7 @@ import (
 	"crawler/internal/parser"
 	parserErrors "crawler/internal/parser/errors"
 	"crawler/internal/parser/helpers"
+	cache "crawler/internal/redis"
 )
 
 const (
@@ -99,7 +100,7 @@ func (p *OzonParser) ParseProductPage(ctx context.Context, pageURL string) (*par
 	return ozonProduct.ToBaseProduct(), nil
 }
 
-func (p *OzonParser) GetTopProducts(ctx context.Context, s *config.SearchConfig) ([]*parser.BaseProduct, error) {
+func (p *OzonParser) GetTopProducts(ctx context.Context, s *config.SearchConfig, cache *cache.ProductCache) ([]*parser.BaseProduct, error) {
 	searchURL := fmt.Sprintf("%s?text=%s&sorting=%s", BaseURLSearch, url.QueryEscape(s.Query), s.GetSortParamForMarket(p.Name(), s.SortBy))
 
 	ctx, cancel := p.browser.NewTab(ctx)
