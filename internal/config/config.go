@@ -8,15 +8,17 @@ import (
 )
 
 type Config struct {
-	Host     string `env:"DB_HOST"`
-	Port     int    `env:"DB_PORT"`
-	User     string `env:"DB_USER"`
-	Password string `env:"DB_PASSWORD"`
-	DBName   string `env:"DB_NAME"`
-	SSLMode  string `env:"DB_SSLMODE"`
-	MaxConns int32  `env:"DB_POOL_MAX_CONNS"`
-	MinConns int32  `env:"DB_POOL_MIN_CONNS"`
-	SaveToDB bool   `env:"DB_SAVE_REQ"`
+	DBHost             string `env:"DB_HOST"`
+	DBPort             int    `env:"DB_PORT"`
+	DBUser             string `env:"DB_USER"`
+	DBPassword         string `env:"DB_PASSWORD"`
+	DBName             string `env:"DB_NAME"`
+	DBSSLMode          string `env:"DB_SSLMODE"`
+	DBMaxConns         int32  `env:"DB_POOL_MAX_CONNS"`
+	DBMinConns         int32  `env:"DB_POOL_MIN_CONNS"`
+	SaveToDB           bool   `env:"DB_SAVE_REQ"`
+	RedisAddr          string `env:"REDIS_ADDR"`
+	RedisCacheDuration int32  `env:"REDIS_CACHE_TIME_MINUTE"`
 
 	WBDeviceID    string `env:"WB_DEVICE_ID"`
 	WBXWbaasToken string `env:"WB_WBAAS_TOKEN"`
@@ -37,5 +39,5 @@ func ReadEnv(c *Config) error {
 
 func (c *Config) GetConnectionURL() string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		c.User, c.Password, c.Host, c.Port, c.DBName, c.SSLMode)
+		c.DBUser, c.DBPassword, c.DBHost, c.DBPort, c.DBName, c.DBSSLMode)
 }

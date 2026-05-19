@@ -8,6 +8,7 @@ import (
 	"crawler/internal/parser/ozon"
 	"crawler/internal/parser/wb"
 	"crawler/internal/parser/yandex"
+	cache "crawler/internal/redis"
 	"crawler/internal/repository/db"
 	"encoding/json"
 	"fmt"
@@ -21,6 +22,7 @@ type DataCrawler struct {
 	Parsers      []parser.Parser
 	Pool         *db.Pool
 	Queries      *db.Queries
+	Cache        *cache.ProductCache
 	Config       *config.Config
 	SearchConfig *config.SearchConfig
 }
@@ -32,6 +34,8 @@ func New(ctx context.Context) (*DataCrawler, error) {
 	if err != nil {
 		log.Fatal("Read config from env failed:", err.Error())
 	}
+
+	cache, err := cache.NewProductCache(c.RedisAddr, time.Duration(c.RedisCacheDuration)*time.Minute)
 
 	sc, err := config.NewSearchConfig()
 
@@ -74,6 +78,7 @@ func New(ctx context.Context) (*DataCrawler, error) {
 		Parsers:      parsers,
 		Pool:         pool,
 		Queries:      queries,
+		Cache:        cache,
 		Config:       &c,
 		SearchConfig: sc,
 	}, nil
@@ -85,6 +90,14 @@ func (d *DataCrawler) Close() {
 	}
 
 	d.Pool.Close()
+
+	if d.Cache != nil {
+		err := d.Cache.Close()
+		if err != nil {
+			log.Printf("closing redis error:%s", err.Error())
+		}
+	}
+
 }
 
 func (d *DataCrawler) GetTopProducts(ctx context.Context) ([]*parser.BaseProduct, error) {
