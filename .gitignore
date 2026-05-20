@@ -2,4 +2,4 @@
 *.env
 *.html
 *.txt
-./build/
+build/
