@@ -33,6 +33,12 @@ Go-приложение для автоматизированного сбора
 
 - Установите необходимые зависимости: `go mod download`
 
+- Примените миграции (**Утилита `golang-migrate`**):
+
+`cd sqlc`
+
+`migrate -path ./migrations -database "postgresql://postgres:root@localhost:5432/datacrawler?sslmode=disable" up`
+
 - Используйте `make` для сборки, или можно напрямую без бинарника: `go run cmd/app/main.go -params`
 
 - `-params` - это набор флагов, который необходим для работы программы.
