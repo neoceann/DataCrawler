@@ -21,12 +21,10 @@ info:
 	@echo "$(BUILD)/$(NAME)"
 	@echo "-markets=yandex, wb, ozon, avito (default "wb")"
 	@echo "-query=Search query"
-	@echo "-limit=		Top N results (default 10)"
-	@echo "-page=		Page number (default 1)"
-	@echo "-sort=		Sort by "popular" or "rating", etc (default "popular")"	
-	@echo "-id=			Product ID (product info on the individual marketplace) (default "200135094")"
+	@echo "-limit=		Top N results (default 5)"
+	@echo "-sort=		Sort by rating, popular, priceAsc, priceDesc (default popular)"
 	@echo
 	@echo "Example:"
-	@echo "$(BUILD)/$(NAME) -markets="wb, ozon" -query="test" -limit=5"
+	@echo "$(BUILD)/$(NAME) -markets=wb, ozon -query=\""lenovo notepad\"" -limit=3"
 
 .PHONY: all fmt clean build info

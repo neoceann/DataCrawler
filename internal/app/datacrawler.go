@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -164,8 +165,17 @@ func (d *DataCrawler) SaveProductsToDB(ctx context.Context, products []*parser.B
 }
 
 func (d *DataCrawler) SaveProductsToFile(products []*parser.BaseProduct) {
+	resultsDir := "./results"
+	if err := os.MkdirAll(resultsDir, 0755); err != nil {
+		log.Fatal(err)
+	}
 	p, _ := json.MarshalIndent(products, "", "  ")
-	os.WriteFile("products.json", p, 0644)
+
+	filename := filepath.Join(resultsDir, "products.json")
+	if err := os.WriteFile(filename, p, 0644); err != nil {
+		log.Fatal(err)
+	}
+
 }
 
 func (d *DataCrawler) findParserForMarketplace(name string) (parser.Parser, error) {
